@@ -1,0 +1,27 @@
+﻿<Window x:Class="Maple.Windows.MapCreator"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Maple.Windows"
+        Closing="DataWindow_Closing"
+        mc:Ignorable="d"
+        Title="MapCreator" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="5*" />
+            <RowDefinition Height="1*" />
+        </Grid.RowDefinitions>
+        <Canvas>
+            <Canvas.Background>
+                <ImageBrush x:Name="ImageBrushData" />
+            </Canvas.Background>
+        </Canvas>
+        <UniformGrid Grid.Row="1" Rows="1">
+            <TextBox Text="{Binding MapNameText}" />
+            <Button x:Name="RecordRope" Content="{Binding RecordRopeText}" IsEnabled="{Binding IsRecordRopeEnabled}" Command="{Binding RecordRopeCommand}" />
+            <Button x:Name="RecordPlatformEdge" Content="{Binding RecordPlatformEdgeText}" IsEnabled="{Binding IsRecordPlatformEdgeEnabled}" Command="{Binding RecordPlatformEdgeCommand}" />
+            <Button Content="Export Map" IsEnabled="{Binding IsExportMapEnabled}" Command="{Binding ExportMapCommand}" />
+        </UniformGrid>
+    </Grid>
+</Window>
