@@ -32,8 +32,11 @@ namespace Maple.Data
             OverheadQuest,
             PlayerMiniMap,
             RebootServer,
+            RebootServerChannelSelect,
+            CharacterSelectionCharacterSlot,
             Rune,
             RuneMiniMap,
+            HP,
             runetest5,
             runetest4,
             runetest3,
@@ -315,10 +318,19 @@ namespace Maple.Data
         /// <returns></returns>
         public static List<string> ReadTextFromImage(Bitmap imageData)
         {
-            var results = new IronTesseract().Read(imageData);
+            double confidence = 0;
+            OcrResult results = null;
+            while (confidence < 90)
+            {
+                results = new IronTesseract().Read(imageData);
+                confidence = results.Confidence;
+            }
+            
             // Flush all graphics changes to the bitmap
             //g.Flush();
             return results.Lines.Select(x => x.Text).ToList();
         }
+
+        
     }
 }

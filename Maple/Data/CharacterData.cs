@@ -8,22 +8,27 @@ namespace Maple.Data
 {
     public enum JumpTypes
     {
-        FlashJump,
-        DoubleJump,
-        Glide
+        UpJumpJump,
+        JumpHoldAltAndArrow,
+        JumpHoldArrowAltAlt,
+        FlashJump
+    }
+
+    public class JumpTimestamp
+    {
+        Vector2 DistanceFromOrigin;
+        DateTime TimeSinceBeginning;
     }
 
     public class JumpData
     {
-        public JumpTypes JumpType;
-        public int FullHoldingJumpDistance;
-        public int HalfHoldingJumpDistance;
-        public int NoHoldingJumpDistance;
+        Dictionary<JumpTypes, List<JumpTimestamp>> JumpTypeToJumpTimestamps;
     }
 
     public class SkillData
     {
-        public static int DiscrepencyTimeMillis = 150;
+        public string SkillName;
+        public int DiscrepencyTimeMillis;
         public char Key;
         public int RefreshMillis;
         public bool UseOnLogin;
@@ -41,18 +46,65 @@ namespace Maple.Data
         }
     }
 
+    public enum Jobs
+    {
+        FirePoisonMage,
+        AngelicBuster,
+        Bowmaster,
+        WildHunter,
+        Paladin,
+        Hero,
+        Shadower,
+        Zero,
+        Evan,
+        Buccaneer,
+        Bishop,
+        BeastTamer,
+        Kinesis,
+        Luminous,
+        NightWalker,
+        DemonSlayer,
+        IceLightningMage,
+        Blaster,
+        DemonAvenger,
+        BattleMage,
+        Shade,
+        Illium,
+        Ark,
+        Pathfinder,
+        Kaiser,
+        Hayato,
+        Aran,
+        Phantom,
+        BlazeWizard,
+        DarkKnight,
+        Mechanic,
+        NightLord,
+        Corsair,
+        Cannoneer,
+        Marksman,
+        Mercedes,
+        DualBlade,
+        WindArcher,
+        DawnWarrior,
+        Hoyoung,
+        Mihile,
+        Cadena,
+        ThunderBreaker,
+        Jett,
+        Xenon,
+        Adele,
+        Kain,
+        Kanna
+    }
+
     class CharacterData
     {
-        public static char HealthPotionKey = 'a';
-        public static char ManaPotionKey = 's';
+        string CharacterName;
+        Jobs CharacterJob;
+        int Level;
         JumpData JumpDataData;
         List<SkillData> SkillDataList;
-        public static int InterCharacterDelay = 100;
-        public static int InterCharacterRandomDelayMax = 25;
-        public bool IsTurnedLeft;
-        public void CharacterBrain()
-        {
-            
-        }
+        int CharacterSelectionLocation;
     }
 }

@@ -70,8 +70,17 @@ namespace Maple.Windows
                     return;
                 }
                 Bitmap src = new Bitmap(bounds.Width, bounds.Height);
+                //src = Imaging.ChangeBackgroundToBlack(src, 6);
                 //Bitmap croppedImage = src;
                 Bitmap croppedImage = Data.Imaging.CropImage(src, Imaging.MiniMapRect);
+
+                //croppedImage = new Bitmap(Imaging.ColorReplace(croppedImage, 200, Color.Black, Color.White));
+                //croppedImage = new Bitmap(b.Width, b.Height);
+                this.Dispatcher.Invoke(() =>
+                {
+                    ModelData.CurrentImage = croppedImage;
+                });
+                
                 Graphics gr = Graphics.FromImage(croppedImage);
                 gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
                 Graphics g = Graphics.FromImage(croppedImage);

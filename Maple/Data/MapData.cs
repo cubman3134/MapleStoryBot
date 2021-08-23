@@ -12,6 +12,24 @@ namespace Maple.Data
         Ledge = 1
     }
 
+    public enum MapNames
+    {
+
+    }
+
+    public enum LevelRanges
+    {
+        Level145 = 145, // kerning tower
+        Level150 = 150, // kerning tower
+        Level155 = 155, // kerning tower
+        Level160 = 160, // kerning tower
+        Level170 = 170, // kritias
+        Level175 = 175, // kritias
+        Level180 = 180, // kritias
+        Level190 = 190, // twilight perion
+        Level195 = 195, // twilight perion
+    }
+
     public class MapPiece
     {
         public MapPieceTypes MapPieceType { get; set; }

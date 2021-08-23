@@ -25,6 +25,7 @@ using System.IO;
 using Maple.Data;
 using Maple.ViewModels;
 using System.ComponentModel;
+using System.Configuration;
 
 namespace Maple
 {
@@ -142,7 +143,10 @@ namespace Maple
             DataContext = new MainWindowViewModel();
             CameraUpdateThread = new Thread(CameraUpdate);
             CameraUpdateThread.Start();
-
+            Input.MasterArduinoData = new MapleSerialPort("Keyboard", ConfigurationManager.AppSettings["ArduinoKeyboardComNumber"]);
+            Input.MasterArduinoData = new MapleSerialPort("Master", ConfigurationManager.AppSettings["ArduinoMasterComNumber"]);
+            Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+            Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
 
             //ImageBrushData.ImageSource = ImageSourceFromBitmap(CropImage(src, cropRect));
             /*using (Graphics g = Graphics.FromImage(src))

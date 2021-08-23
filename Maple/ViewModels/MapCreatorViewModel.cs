@@ -1,7 +1,10 @@
 ﻿using Maple.Data;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +14,8 @@ namespace Maple.ViewModels
 {
     public class MapCreatorViewModel : ViewModelBase
     {
+        public Bitmap CurrentImage { get; set; }
+
         MapData _mapInfoData;
         MapData MapInfoData
         {
@@ -58,6 +63,32 @@ namespace Maple.ViewModels
             set { _isRecordRopeEnabled = value; NotifyPropertyChanged(); }
         }
 
+        private ICommand _recordRopeCommand;
+        public ICommand RecordRopeCommand
+        {
+            get
+            {
+                return _recordRopeCommand ?? (_recordRopeCommand = new CommandHandler(() => RecordRope(), () => true));
+            }
+        }
+
+        public void RecordRope()
+        {
+            if (MapPieceData == null)
+            {
+                MapPieceData = new MapPiece(MapPieceTypes.Rope);
+                MapPieceData.SetBeginningOrEnd(CurrentPosition);
+            }
+            else
+            {
+                MapPieceData.SetBeginningOrEnd(CurrentPosition);
+                MapInfoData.MapPieceDataList.Add(MapPieceData);
+                MapPieceData = null;
+            }
+            IsExportMapEnabled = !IsExportMapEnabled;
+            IsRecordPlatformEdgeEnabled = !IsRecordPlatformEdgeEnabled;
+        }
+
 
         private string _recordPlatformEdgeText;
 
@@ -90,7 +121,32 @@ namespace Maple.ViewModels
                 MapPieceData = null;
             }
             IsRecordRopeEnabled = !IsRecordRopeEnabled;
-            IsRecordPlatformEdgeEnabled = !IsRecordPlatformEdgeEnabled;
+            IsExportMapEnabled = !IsExportMapEnabled;
+        }
+
+        private ICommand _exportMapCommand;
+        public ICommand ExportMapCommand
+        {
+            get
+            {
+                return _exportMapCommand ?? (_exportMapCommand = new CommandHandler(() => ExportMap(), () => true));
+            }
+        }
+
+        public void ExportMap()
+        {
+            MapInfoData.MapName = MapNameText;
+            var allImageText = Imaging.ReadTextFromImage(CurrentImage);
+            string fileName = string.Join("_", allImageText);
+            if (fileName.Length <= 0)
+            {
+                return;
+            }
+            string jsonString = JsonConvert.SerializeObject(MapInfoData, Formatting.Indented);
+            string mapExportLocation = System.Configuration.ConfigurationManager.AppSettings["MapExportLocation"];
+            string filePath = Path.Combine(mapExportLocation, fileName);
+            File.WriteAllText(filePath, jsonString);
+            MapInfoData = new MapData();
         }
 
         private bool _isRecordPlatformEdgeEnabled;

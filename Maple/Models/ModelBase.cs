@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Maple.Models
 {
-    public class ModelBase
+    public class ModelBase : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         public void NotifyPropertyChanged([CallerMemberName] string propertyName = "")

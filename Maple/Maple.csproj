@@ -40,6 +40,7 @@
     <Reference Include="IronOcr, Version=2021.6.0.0, Culture=neutral, PublicKeyToken=c2cbcea5ea3f6d8d, processorArchitecture=MSIL">
       <HintPath>..\packages\IronOcr.2021.6.0\lib\net40\IronOcr.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
@@ -64,12 +65,22 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Controls\LabeledControl\LabeledControl.cs" />
+    <Compile Include="Data\MapleSerialPort.cs" />
     <Compile Include="Models\ModelBase.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\MapCreatorViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
+    <Compile Include="Windows\JobEdit.xaml.cs">
+      <DependentUpon>JobEdit.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\JobsWindow.xaml.cs">
+      <DependentUpon>JobsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Windows\MapCreator.xaml.cs">
       <DependentUpon>MapCreator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\SkillEdit.xaml.cs">
+      <DependentUpon>SkillEdit.xaml</DependentUpon>
     </Compile>
     <Compile Include="Windows\StatisticsViewer.xaml.cs">
       <DependentUpon>StatisticsViewer.xaml</DependentUpon>
@@ -93,7 +104,19 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Windows\JobEdit.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\JobsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Windows\MapCreator.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\SkillEdit.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -173,6 +196,14 @@
     <Resource Include="Images\runetest2.png" />
     <Resource Include="Images\runetest3.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="Images\HP.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\RebootServerChannelSelect.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\CharacterSelectionCharacterSlot.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
