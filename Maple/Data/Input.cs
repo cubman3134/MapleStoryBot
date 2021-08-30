@@ -52,6 +52,7 @@ namespace Maple.Data
 
         public static MapleSerialPort MasterArduinoData;
         public static MapleSerialPort KeyboardArduinoData;
+        public static MapleSerialPort MouseArduinoData;
 
         public static void StartInput(char c)
         {
@@ -81,19 +82,103 @@ namespace Maple.Data
             MasterArduinoData.SendData($"KEYLIFT{asciiValString}");
         }
 
-        /*public static void SetMouseLocation(int locationX, int locationY)
+        private static void MoveMouse(Vector2 location)
         {
             // MV00000000
-            ArduinoPortData.Write($"#MOVX{locationX}\n");
-            ArduinoPortData.Write($"#MOVY{locationY}\n");
+            string movXString = location.X.ToString().PadLeft(4, '0');
+            string movYString = location.Y.ToString().PadLeft(4, '0');
+            MasterArduinoData.SendData($"MV{movXString}{movYString}");
+            _mouseLocation = new Vector2(Math.Max(_mouseLocation.X + location.X, 0), Math.Max(_mouseLocation.Y + location.Y, 0));
         }
+
+        public static void SetMouseLocation(Vector2 location)
+        {
+            Random rand = new Random();
+            /*int sleepAmount = 1;
+            int randX;
+            int randY;
+            int numPolys = rand.Next(1, 4);*/
+            if (_mouseLocation.X == location.X)
+            {
+                MoveMouse(new Vector2(rand.Next(3, 10), rand.Next(1, 5)));
+            }
+            List<Vector2> locations = new List<Vector2>() { location, _mouseLocation };
+            /*for (int i = 0; i < numPolys; i++)
+            {
+                randX = location.X - _mouseLocation.X;
+                randY = location.Y - _mouseLocation.Y;
+                int moveAmountX = rand.Next(Math.Min(randX, 0), Math.Max(randX + 1, 0));
+                int moveAmountY = rand.Next(Math.Min(randY, 0), Math.Max(randY + 1, 0));
+                locations.Add(new Vector2(moveAmountX, moveAmountY));
+            }*/
+            var moveLocations = MapleMath.PolynomialLeastSquares(locations.OrderBy(x => x.X).ToList(), 2);
+            int originalIterator = 0;
+            int iteratorChangeAmount = 1;
+            int maxVal = moveLocations.Count;
+            if (_mouseLocation.X > location.X)
+            {
+                originalIterator = moveLocations.Count - 1;
+                iteratorChangeAmount = -1;
+                maxVal = -1;
+            }
+            for (int i = originalIterator; i != maxVal; i += iteratorChangeAmount)
+            {
+                Vector2 curLocation = moveLocations[i];
+                MoveMouse(new Vector2(curLocation.X - _mouseLocation.X, curLocation.Y - _mouseLocation.Y));
+            }
+            /*while (_mouseLocation.X != location.X || _mouseLocation.Y != location.Y)
+            {
+                
+                sleepAmount = rand.Next(5, 15);
+                MoveMouse(new Vector2(moveAmountX, moveAmountY));
+                Thread.Sleep(sleepAmount);
+            }*/
+            //MoveMouse(new Vector2(location.X, location.Y));
+        }
+
+        private static Vector2 _mouseLocation;
+
 
         public static void ClickMouse()
         {
-            ArduinoPortData.Write($"MCLCK");
+            MasterArduinoData.SendData($"MOUSELCLCK");
         }
 
-        public static void DoubleClickMouse()
+        public static void RightClickMouse()
+        {
+            MasterArduinoData.SendData($"MOUSERCLCK");
+        }
+
+        public static void ReleaseMouse()
+        {
+            MasterArduinoData.SendData($"MOUSELRLAX");
+        }
+
+        public static void RightReleaseMouse()
+        {
+            MasterArduinoData.SendData($"MOUSERRLAX");
+        }
+
+        public static void InitializeInputs()
+        {
+            Input.KeyboardArduinoData = new MapleSerialPort("Keyboard", ConfigurationManager.AppSettings["ArduinoKeyboardComNumber"]);
+            Input.MasterArduinoData = new MapleSerialPort("Master", ConfigurationManager.AppSettings["ArduinoMasterComNumber"]);
+            Input.MouseArduinoData = new MapleSerialPort("Mouse", ConfigurationManager.AppSettings["ArduinoMouseComNumber"]);
+            _mouseLocation = new Vector2(0, 0);
+            for (int i = 0; i < 10; i++)
+            {
+                Input.MoveMouse(new Vector2(10, 100));
+            }
+            for (int i = 0; i < 100; i++)
+            {
+                Input.MoveMouse(new Vector2(-100, -50));
+            }
+            ClickMouse();
+            Thread.Sleep(11);
+            ReleaseMouse();
+        }
+
+        /*public static void DoubleClickMouse()
         {
             ArduinoPortData.Write($"MDCLCK");
         }

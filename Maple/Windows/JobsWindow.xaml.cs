@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Maple.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,9 +20,15 @@ namespace Maple.Windows
     /// </summary>
     public partial class JobsWindow : Window
     {
+        JobsWindowViewModel ModelData
+        {
+            get { return DataContext as JobsWindowViewModel; }
+        }
+
         public JobsWindow()
         {
             InitializeComponent();
+            DataContext = new JobsWindowViewModel();
         }
     }
 }

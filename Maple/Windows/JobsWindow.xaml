@@ -14,12 +14,12 @@
         </Grid.RowDefinitions>
         <UniformGrid>
             <TextBlock Text="Jobs" HorizontalAlignment="Right" FontSize="30" />
-            <ComboBox ItemsSource="{Binding JobsDataList}" />
+            <ComboBox ItemsSource="{Binding JobsDataList}" SelectedItem="{Binding SelectedJobData}" />
         </UniformGrid>
         
         <UniformGrid Grid.Row="1">
-            <Button Content="Create New Job" />
-            <Button Content="Create New Job" />
+            <Button Content="Create New Job" Command="{Binding CreateNewJobCommand}" />
+            <Button Content="Edit Job" Command="{Binding EditJobCommand}" />
         </UniformGrid>
         
     </Grid>

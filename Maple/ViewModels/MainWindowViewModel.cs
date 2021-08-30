@@ -11,7 +11,23 @@ namespace Maple.ViewModels
     class MainWindowViewModel : ViewModelBase
     {
 
+        private ICommand _alterJobsCommand;
 
+        public ICommand AlterJobsCommand
+        {
+            get
+            {
+                return _alterJobsCommand ?? (_alterJobsCommand = new CommandHandler(() => AlterJobs(), () => true));
+            }
+        }
+
+        private void AlterJobs()
+        {
+            Windows.JobsWindow jobsWindow = new Windows.JobsWindow();
+            IsActive = false;
+            jobsWindow.ShowDialog();
+            IsActive = true;
+        }
 
         private ICommand _createNewMapCommand;
         public ICommand CreateNewMapCommand

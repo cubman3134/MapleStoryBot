@@ -2,50 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Maple.Data
 {
-    public enum JumpTypes
-    {
-        UpJumpJump,
-        JumpHoldAltAndArrow,
-        JumpHoldArrowAltAlt,
-        FlashJump
-    }
-
-    public class JumpTimestamp
-    {
-        Vector2 DistanceFromOrigin;
-        DateTime TimeSinceBeginning;
-    }
-
-    public class JumpData
-    {
-        Dictionary<JumpTypes, List<JumpTimestamp>> JumpTypeToJumpTimestamps;
-    }
-
-    public class SkillData
-    {
-        public string SkillName;
-        public int DiscrepencyTimeMillis;
-        public char Key;
-        public int RefreshMillis;
-        public bool UseOnLogin;
-        public DateTime NextUseTime
-        {
-            get { return LastUseTime + new TimeSpan(0, 0, 0, 0, RefreshMillis); }
-        }
-
-        public DateTime LastUseTime;
-
-        public SkillData(char key, int refreshMillis)
-        {
-            LastUseTime = DateTime.Now - new TimeSpan(1, 0, 0, 0);
-
-        }
-    }
-
     public enum Jobs
     {
         FirePoisonMage,
@@ -103,8 +64,19 @@ namespace Maple.Data
         string CharacterName;
         Jobs CharacterJob;
         int Level;
-        JumpData JumpDataData;
+        public JumpData JumpDataData;
         List<SkillData> SkillDataList;
         int CharacterSelectionLocation;
+
+        public bool TryToUseSkill()
+        {
+            var curSkill = SkillDataList.OrderBy(x => x.NextUseTime).First();
+            if (curSkill.NextUseTime < DateTime.Now)
+            {
+                curSkill.UseSkill();
+                return true;
+            }
+            return false;
+        }
     }
 }

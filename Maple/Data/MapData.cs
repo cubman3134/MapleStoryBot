@@ -14,10 +14,10 @@ namespace Maple.Data
 
     public enum MapNames
     {
-
+        KerningTower2FCafe1,
     }
 
-    public enum LevelRanges
+    /*public enum LevelRanges
     {
         Level145 = 145, // kerning tower
         Level150 = 150, // kerning tower
@@ -28,13 +28,16 @@ namespace Maple.Data
         Level180 = 180, // kritias
         Level190 = 190, // twilight perion
         Level195 = 195, // twilight perion
-    }
+    }*/
 
     public class MapPiece
     {
         public MapPieceTypes MapPieceType { get; set; }
         public Vector2 Beginning { get; set; }
         public Vector2 End { get; set; }
+
+        public static Vector2 CurrentMinimapLocation { get; set; }
+        public static Vector2 CurrentPixelLocation { get; set; }
 
         public MapPiece(MapPieceTypes mapPieceType, Vector2 beginning, Vector2 end)
         {
@@ -77,12 +80,37 @@ namespace Maple.Data
 
     public class MapData
     {
-        public string MapName;
+        public MapNames MapName;
+        public static Dictionary<int, MapNames> LevelRangesToMapNames = new Dictionary<int, MapNames>()
+        {
+            { 145, MapNames.KerningTower2FCafe1 }
+        };
+
+        public static Dictionary<MapNames, List<MobNames>> MapNamesToMobNames = new Dictionary<MapNames, List<MobNames>>()
+        {
+            { MapNames.KerningTower2FCafe1, new List<MobNames>() { MobNames.BlueRaspberryJellyJuice, MobNames.EnragedEspressoMachine } }
+        };
+
         public List<MapPiece> MapPieceDataList;
+
+        public double MinimapToPixelRatioX { get; set; }
+        public double MinimapToPixelRatioY { get; set; }
 
         public MapData()
         {
             MapPieceDataList = new List<MapPiece>();
+        }
+
+        public MapPiece GetCurrentMapPiece(Vector2 objectLocation)
+        {
+            foreach (var curMapPiece in MapPieceDataList)
+            {
+                if (MapleMath.LocationWithinBounds(objectLocation, curMapPiece.Beginning, curMapPiece.End))
+                {
+                    return curMapPiece;
+                }
+            }
+            return null;
         }
     }
 }

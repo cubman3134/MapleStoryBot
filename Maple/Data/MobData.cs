@@ -29,10 +29,7 @@ namespace Maple.Data
         {
             Locations.Add(newLocation);
         }
-    }
 
-    public class MobData
-    {
         public static double MaxVerticalClusterDistance = 100.0;
         public static double MaxHorizontalClusterDistance = 300.0;
         public static List<MobCluster> FindMobClustersFromPixelData(List<int> mobLocations, int imageWidth, int imageHeight)
@@ -47,7 +44,7 @@ namespace Maple.Data
                     double verticalDistance = Math.Abs(curCoordinate.Y - curMobCluster.Center.Y);
                     double horizontalDistance = Math.Abs(curCoordinate.X - curMobCluster.Center.X);
                     //double distance = MapleMath.PixelCoordinateDistance(curCoordinate, curMobCluster.Center);
-                    if (verticalDistance < MaxVerticalClusterDistance 
+                    if (verticalDistance < MaxVerticalClusterDistance
                         && horizontalDistance < MaxHorizontalClusterDistance)
                     {
                         curMobCluster.AddHit(curCoordinate);
@@ -62,5 +59,30 @@ namespace Maple.Data
             }
             return mobClusters;
         }
+    }
+
+    public enum MobNames
+    {
+        BlueRaspberryJellyJuice,
+        EnragedEspressoMachine
+    }
+
+    public class MobData
+    {
+        public static Dictionary<MobNames, List<Imaging.ImageFiles>> MobNamesToImagingFiles = new Dictionary<MobNames, List<Imaging.ImageFiles>>()
+        {
+            { MobNames.BlueRaspberryJellyJuice, new List<Imaging.ImageFiles>()
+                { 
+                  Imaging.ImageFiles.BlueRaspberryJellyJuiceLeft,
+                  Imaging.ImageFiles.BlueRaspberryJellyJuiceRight
+                }
+            },
+            { MobNames.EnragedEspressoMachine, new List<Imaging.ImageFiles>()
+                { 
+                  Imaging.ImageFiles.BlueEspressoMachineLeft,
+                  Imaging.ImageFiles.BlueEspressoMachineRight
+                } 
+            },
+        };
     }
 }

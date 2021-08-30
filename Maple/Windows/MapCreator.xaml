@@ -21,6 +21,7 @@
             <TextBox Text="{Binding MapNameText}" />
             <Button x:Name="RecordRope" Content="{Binding RecordRopeText}" IsEnabled="{Binding IsRecordRopeEnabled}" Command="{Binding RecordRopeCommand}" />
             <Button x:Name="RecordPlatformEdge" Content="{Binding RecordPlatformEdgeText}" IsEnabled="{Binding IsRecordPlatformEdgeEnabled}" Command="{Binding RecordPlatformEdgeCommand}" />
+            <Button x:Name="RecordPixelToMapPixel" Content="Record Pixel to Map Pixel" Command="{Binding RecordPixelToMapPixelCommand}" />
             <Button Content="Export Map" IsEnabled="{Binding IsExportMapEnabled}" Command="{Binding ExportMapCommand}" />
         </UniformGrid>
     </Grid>

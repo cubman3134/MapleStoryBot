@@ -40,8 +40,16 @@ namespace Maple.Data
 
         public void SendData(string message)
         {
+            ArduinoPortData.RtsEnable = false;
             char endString = '#';
             ArduinoPortData.Write($"{message} {endString}");
+            ArduinoPortData.RtsEnable = true;
+        }
+
+        ~MapleSerialPort()
+        {
+            ReadThread.Join();
+            ArduinoPortData.Close();
         }
     }
 }

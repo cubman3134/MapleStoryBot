@@ -9,12 +9,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 using IronOcr;
 
 namespace Maple.Data
 {
-    class Imaging
+    public class Imaging
     {
         public static Rectangle ChatBoxRect = new Rectangle(6, 620, 385, 176);
         public static Rectangle MiniMapRect = new Rectangle(0, 0, 350, 200);
@@ -37,6 +38,7 @@ namespace Maple.Data
             Rune,
             RuneMiniMap,
             HP,
+            LeftHealthBar,
             runetest5,
             runetest4,
             runetest3,
@@ -177,6 +179,35 @@ namespace Maple.Data
             return false;
         }
 
+        public static bool GetMobLocation(MapData mapData, out int numMobs, out Vector2 bestMinimapLocation)
+        {
+            List<MobNames> currentMobNames = MapData.MapNamesToMobNames[mapData.MapName];
+            List<Imaging.ImageFiles> currentMobImageFileNames = new List<Imaging.ImageFiles>();
+            foreach (var curMobName in currentMobNames)
+            {
+                currentMobImageFileNames.AddRange(MobData.MobNamesToImagingFiles[curMobName]);
+            }
+            List<Bitmap> currentMobImages = new List<Bitmap>();
+            foreach (var curMobImageFileName in currentMobImageFileNames)
+            {
+                currentMobImages.Add(Imaging.GetImageFromFile(curMobImageFileName));
+            }
+            Bitmap curScreen;
+            List<int> mobLocations;
+            curScreen = Imaging.GetCurrentGameScreen();
+            if (Imaging.FindBitmap(currentMobImages, curScreen, 20, out mobLocations))
+            {
+                List<MobCluster> mobClusterData = MobCluster.FindMobClustersFromPixelData(mobLocations, curScreen.Width, curScreen.Height);
+                MobCluster curMobCluster = mobClusterData.OrderByDescending(x => x.Locations.Count()).Take(1).First();
+                bestMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curMobCluster.Center, mapData);
+                numMobs = mobLocations.Count;
+                return true;
+            }
+            bestMinimapLocation = null;
+            numMobs = 0;
+            return false;
+        }
+
         private static List<Color> GetColorsFromBmp(Bitmap bmp)
         {
             List<Color> colorData = new List<Color>(new Color[bmp.Width * bmp.Height]);
@@ -207,6 +238,15 @@ namespace Maple.Data
             });
             bmp.UnlockBits(bmData);
             return colorData;
+        }
+
+        public static Bitmap GetCurrentGameScreen()
+        {
+            Rectangle bounds = Screen.GetBounds(System.Drawing.Point.Empty);
+            var src = new Bitmap(bounds.Width, bounds.Height);
+            Graphics gr = Graphics.FromImage(src);
+            gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
+            return src;
         }
 
         public static bool FindBitmap(List<Bitmap> smallBmps, Bitmap bigBmp, int tol, out List<int> locations)
