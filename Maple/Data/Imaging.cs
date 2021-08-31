@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -15,6 +16,54 @@ using IronOcr;
 
 namespace Maple.Data
 {
+    public class PhotoWithTimestamp
+    {
+        public Bitmap Photo;
+        public DateTime TimeStamp;
+
+        public PhotoWithTimestamp(Bitmap photo)
+        {
+            TimeStamp = DateTime.Now;
+            Photo = photo;
+        }
+    }
+
+    public class PhotoTaker
+    {
+        private static Thread _photoTakerThread;
+        private static int _millisecondRefreshRate;
+        private static List<PhotoWithTimestamp> _photoWithTimestampDataList;
+        public static void StartTakingImages(int millisecondRefreshRate)
+        {
+            _millisecondRefreshRate = millisecondRefreshRate;
+            _photoWithTimestampDataList = new List<PhotoWithTimestamp>();
+            _photoTakerThread = new Thread(PhotoTakerWorker);
+            _photoTakerThread.Start();
+        }
+
+        public static void StopTakingImages()
+        {
+            _photoTakerThread.Join();
+            _photoTakerThread = null;
+        }
+
+        public static List<PhotoWithTimestamp> GetPhotosAndDeleteFromMemory()
+        {
+            List<PhotoWithTimestamp> returnData = _photoWithTimestampDataList;
+            _photoWithTimestampDataList.Clear();
+            return returnData;
+        }
+
+        private static void PhotoTakerWorker()
+        {
+            while (true)
+            {
+                _photoWithTimestampDataList.Add(new PhotoWithTimestamp(Imaging.GetCurrentGameScreen()));
+                Thread.Sleep(_millisecondRefreshRate);
+            }
+        }
+    }
+
     public class Imaging
     {
         public static Rectangle ChatBoxRect = new Rectangle(6, 620, 385, 176);
@@ -43,7 +92,8 @@ namespace Maple.Data
             runetest4,
             runetest3,
             runetest2,
-            runetest1
+            runetest1,
+            DemonAvengerName
         }
 
         //If you get 'dllimport unknown'-, then add 'using System.Runtime.InteropServices;'

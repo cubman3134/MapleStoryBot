@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -148,6 +149,90 @@ namespace Maple.ViewModels
             File.WriteAllText(filePath, jsonString);
             MapInfoData = new MapData();
         }
+
+        private ICommand _recordPixelToMapPixelCommand;
+        public ICommand RecordPixelToMapPixelCommand
+        {
+            get
+            {
+                return _recordPixelToMapPixelCommand ?? (_recordPixelToMapPixelCommand = new CommandHandler(() => RecordPixelToMapPixel(), () => true)); 
+            }
+        }
+
+        public enum RecordPixelToMapPixelStatuses
+        {
+            XFindingInitialPhotoLocation,
+            XFindingFirstImageWhereOriginalMinimapLocationChanged,
+            XFindingSecondImageWhereOriginalMinimapLocationChanged,
+            YFindingInitialPhotoLocation,
+            YFindingImageWhereOriginalMinimapLocationChanged,
+        }
+
+        public void RecordPixelToMapPixel()
+        {
+            Input.StartInput('d');
+            PhotoTaker.StartTakingImages(10);
+            Thread.Sleep(1000);
+            PhotoTaker.StopTakingImages();
+            Input.StopInput('d');
+            List<PhotoWithTimestamp> photoWithTimeDataList = PhotoTaker.GetPhotosAndDeleteFromMemory();
+            var playerImage = Imaging.GetImageFromFile(Imaging.ImageFiles.PlayerMiniMap);
+            var playerNameImage = Imaging.GetImageFromFile(Imaging.ImageFiles.DemonAvengerName);
+            RecordPixelToMapPixelStatuses currentStatus = RecordPixelToMapPixelStatuses.XFindingInitialPhotoLocation;
+            List<int> minimapLocations;
+            List<int> nameLocations;
+            Vector2 minimapLocationPre = null;
+            Vector2 minimapLocationOriginal = null;
+            Vector2 minimapLocationChanged = null;
+            Vector2 playerLocationOriginal;
+            Vector2 playerLocationChanged;
+            
+            foreach (var curPhotoWithTimestamp in photoWithTimeDataList)
+            {
+                if (Imaging.FindBitmap(new List<Bitmap>() { playerImage }, curPhotoWithTimestamp.Photo, 20, out minimapLocations))
+                {
+                    switch (currentStatus)
+                    {
+                        case RecordPixelToMapPixelStatuses.XFindingInitialPhotoLocation:
+                            minimapLocationPre = MapleMath.PixelToPixelCoordinate(minimapLocations[0], curPhotoWithTimestamp.Photo.Width);
+                            currentStatus = RecordPixelToMapPixelStatuses.XFindingFirstImageWhereOriginalMinimapLocationChanged;
+                            break;
+                        case RecordPixelToMapPixelStatuses.XFindingFirstImageWhereOriginalMinimapLocationChanged:
+                            minimapLocationOriginal = MapleMath.PixelToPixelCoordinate(minimapLocations[0], curPhotoWithTimestamp.Photo.Width);
+                            if (minimapLocationOriginal.X == minimapLocationPre.X)
+                            {
+                                continue;
+                            }
+                            if (Imaging.FindBitmap(new List<Bitmap>() { playerNameImage }, curPhotoWithTimestamp.Photo, 50, out nameLocations))
+                            {
+                                playerLocationOriginal = MapleMath.PixelToPixelCoordinate(nameLocations[0], curPhotoWithTimestamp.Photo.Width);
+                                currentStatus = RecordPixelToMapPixelStatuses.XFindingSecondImageWhereOriginalMinimapLocationChanged;
+                            }
+                            break;
+                        case RecordPixelToMapPixelStatuses.XFindingSecondImageWhereOriginalMinimapLocationChanged:
+                            minimapLocationChanged = MapleMath.PixelToPixelCoordinate(minimapLocations[0], curPhotoWithTimestamp.Photo.Width);
+                            if (minimapLocationChanged.X == minimapLocationOriginal.X)
+                            {
+                                continue;
+                            }
+                            if (Imaging.FindBitmap(new List<Bitmap>() { playerNameImage }, curPhotoWithTimestamp.Photo, 50, out nameLocations))
+                            {
+                                playerLocationChanged = MapleMath.PixelToPixelCoordinate(nameLocations[0], curPhotoWithTimestamp.Photo.Width);
+                                currentStatus = RecordPixelToMapPixelStatuses.YFindingInitialPhotoLocation;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (currentStatus == RecordPixelToMapPixelStatuses.YFindingInitialPhotoLocation)
+                {
+                    break;
+                }
+            }
+            
+        }
+
 
         private bool _isRecordPlatformEdgeEnabled;
         public bool IsRecordPlatformEdgeEnabled

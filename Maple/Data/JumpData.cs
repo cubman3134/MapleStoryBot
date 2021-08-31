@@ -14,14 +14,14 @@ namespace Maple.Data
         FlashJump
     }
 
-    public class JumpTimestamp
-    {
-        public Vector2 DistanceFromOrigin;
-        public DateTime TimeSinceBeginning;
-    }
-
     public class JumpData
     {
-        public Dictionary<JumpTypes, List<JumpTimestamp>> JumpTypeToJumpTimestamps;
+        // int is intercharacter delay
+        public Dictionary<Tuple<JumpTypes, int>, List<double>> EquationCoefficients { get; set; }
+
+        public JumpData()
+        {
+            EquationCoefficients = new Dictionary<Tuple<JumpTypes, int>, List<double>>();
+        }
     }
 }
