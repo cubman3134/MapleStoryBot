@@ -89,7 +89,11 @@ namespace Maple
                 {
                     return;
                 }
-                Bitmap croppedImage = Data.Imaging.GetCurrentGameScreen();
+                Bitmap croppedImage;
+                if (!Data.Imaging.GetCurrentGameScreen(out croppedImage))
+                {
+                    continue;
+                }
                 //Bitmap croppedImage = Data.Imaging.CropImage(src, new Rectangle(730, 180, 92, 50));
                 
                 Graphics g = Graphics.FromImage(croppedImage);

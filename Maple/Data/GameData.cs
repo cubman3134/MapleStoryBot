@@ -90,9 +90,13 @@ namespace Maple.Data
         private void MinimapThreadWorker()
         {
             var playerImage = Imaging.GetImageFromFile(Imaging.ImageFiles.PlayerMiniMap);
+            Bitmap fullGameScreen;
             while (true)
             {
-                var fullGameScreen = Imaging.GetCurrentGameScreen();
+                if (!Imaging.GetCurrentGameScreen(out fullGameScreen))
+                {
+                    continue;
+                }
                 var miniMapScreen = Imaging.CropImage(fullGameScreen, Imaging.MiniMapRect);
                 if (Imaging.FindBitmap(new List<Bitmap>() { playerImage }, miniMapScreen, 20, out List<int> locations))
                 {
@@ -105,7 +109,11 @@ namespace Maple.Data
 
         private void NearbyMobsThreadWorker()
         {
-            Bitmap curScreen = Imaging.GetCurrentGameScreen();
+            Bitmap curScreen;
+            while (!Imaging.GetCurrentGameScreen(out curScreen))
+            {
+                Thread.Sleep(10);
+            }
             var leftHealthBarImage = Imaging.GetImageFromFile(Imaging.ImageFiles.LeftHealthBar);
             List<int> imageLocations;
             bool isLeft = false;
@@ -169,42 +177,42 @@ namespace Maple.Data
             {
                 if (CurrentPlayerMinimapLocation.X < vectorTarget.X)
                 {
-                    Input.StartInput('d');
+                    Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                     while (CurrentPlayerMinimapLocation.X < vectorTarget.X)
                     {
                         Thread.Sleep(5);
                     }
-                    Input.StopInput('d');
+                    Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                 }
                 else
                 {
-                    Input.StartInput('a');
+                    Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                     while (CurrentPlayerMinimapLocation.X > vectorTarget.X)
                     {
                         Thread.Sleep(5);
                     }
-                    Input.StopInput('a');
+                    Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                 }
             }
             else if (mapTarget.MapPieceType == MapPieceTypes.Rope)
             {
                 if (CurrentPlayerMinimapLocation.Y < vectorTarget.Y)
                 {
-                    Input.StartInput('w');
+                    Input.StartInput(Input.SpecialCharacters.KEY_UP_ARROW);
                     while (CurrentPlayerMinimapLocation.Y < vectorTarget.Y)
                     {
                         Thread.Sleep(5);
                     }
-                    Input.StopInput('w');
+                    Input.StopInput(Input.SpecialCharacters.KEY_UP_ARROW);
                 }
                 else
                 {
-                    Input.StartInput('s');
+                    Input.StartInput(Input.SpecialCharacters.KEY_DOWN_ARROW);
                     while (CurrentPlayerMinimapLocation.Y > vectorTarget.Y)
                     {
                         Thread.Sleep(5);
                     }
-                    Input.StopInput('s');
+                    Input.StopInput(Input.SpecialCharacters.KEY_DOWN_ARROW);
                 }
             }
             
@@ -214,9 +222,13 @@ namespace Maple.Data
         {
             _mobFinderThread = new Thread(NewMobFinderThreadWorker);
             Vector2 nextMobCluster;
+            if (!Imaging.GetCurrentGameScreen(out Bitmap curGameScreen))
+            {
+                return;
+            }
             if (GameStatus == GameStatuses.Unassigned)
             {
-                GetGameStatus(Imaging.GetCurrentGameScreen());
+                GetGameStatus(curGameScreen);
             }
             // move through the game statuses until we are in game
             if (GameStatus == GameStatuses.GameClosed)

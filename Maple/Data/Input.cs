@@ -159,20 +159,26 @@ namespace Maple.Data
             MasterArduinoData.SendData($"MOUSERRLAX");
         }
 
+        public static void ResetMouse()
+        {
+            /*for (int i = 0; i < 10; i++)
+            {
+                Input.MoveMouse(new Vector2(10, 100));
+            }*/
+            _mouseLocation = new Vector2(500, 500);
+            for (int i = 0; i < 100; i++)
+            {
+                Input.MoveMouse(new Vector2(-100, -100));
+            }
+            _mouseLocation = new Vector2(0, 0);
+        }
+
         public static void InitializeInputs()
         {
             Input.KeyboardArduinoData = new MapleSerialPort("Keyboard", ConfigurationManager.AppSettings["ArduinoKeyboardComNumber"]);
             Input.MasterArduinoData = new MapleSerialPort("Master", ConfigurationManager.AppSettings["ArduinoMasterComNumber"]);
             Input.MouseArduinoData = new MapleSerialPort("Mouse", ConfigurationManager.AppSettings["ArduinoMouseComNumber"]);
-            _mouseLocation = new Vector2(0, 0);
-            for (int i = 0; i < 10; i++)
-            {
-                Input.MoveMouse(new Vector2(10, 100));
-            }
-            for (int i = 0; i < 100; i++)
-            {
-                Input.MoveMouse(new Vector2(-100, -50));
-            }
+            ResetMouse();
             ClickMouse();
             Thread.Sleep(11);
             ReleaseMouse();

@@ -43,14 +43,15 @@ namespace Maple.Data
 
         public static void StopTakingImages()
         {
-            _photoTakerThread.Join();
+            _photoTakerThread.Abort();
+            //_photoTakerThread.Join();
             _photoTakerThread = null;
         }
 
         public static List<PhotoWithTimestamp> GetPhotosAndDeleteFromMemory()
         {
             List<PhotoWithTimestamp> returnData = _photoWithTimestampDataList;
-            _photoWithTimestampDataList.Clear();
+            //_photoWithTimestampDataList.Clear();
             return returnData;
         }
 
@@ -58,8 +59,19 @@ namespace Maple.Data
         {
             while (true)
             {
-                _photoWithTimestampDataList.Add(new PhotoWithTimestamp(Imaging.GetCurrentGameScreen()));
-                Thread.Sleep(_millisecondRefreshRate);
+                try
+                {
+                    if (!Imaging.GetCurrentGameScreen(out Bitmap currentBitmap))
+                    {
+                        continue;
+                    }
+                    _photoWithTimestampDataList.Add(new PhotoWithTimestamp(currentBitmap));
+                    Thread.Sleep(_millisecondRefreshRate);
+                }
+                catch (Exception ex)
+                {
+                    return;
+                }
             }
         }
     }
@@ -244,7 +256,10 @@ namespace Maple.Data
             }
             Bitmap curScreen;
             List<int> mobLocations;
-            curScreen = Imaging.GetCurrentGameScreen();
+            while (!Imaging.GetCurrentGameScreen(out curScreen))
+            {
+                Thread.Sleep(10);
+            }
             if (Imaging.FindBitmap(currentMobImages, curScreen, 20, out mobLocations))
             {
                 List<MobCluster> mobClusterData = MobCluster.FindMobClustersFromPixelData(mobLocations, curScreen.Width, curScreen.Height);
@@ -290,13 +305,21 @@ namespace Maple.Data
             return colorData;
         }
 
-        public static Bitmap GetCurrentGameScreen()
+        public static bool GetCurrentGameScreen(out Bitmap gameScreen)
         {
             Rectangle bounds = Screen.GetBounds(System.Drawing.Point.Empty);
-            var src = new Bitmap(bounds.Width, bounds.Height);
-            Graphics gr = Graphics.FromImage(src);
-            gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
-            return src;
+            gameScreen = null;
+            try
+            {
+                gameScreen = new Bitmap(bounds.Width, bounds.Height);
+                Graphics gr = Graphics.FromImage(gameScreen);
+                gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            return true;
         }
 
         public static bool FindBitmap(List<Bitmap> smallBmps, Bitmap bigBmp, int tol, out List<int> locations)
