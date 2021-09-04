@@ -5,9 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Maple.Windows"
         mc:Ignorable="d"
-        Title="SkillEdit" Height="450" Width="800">
+        Title="SkillEdit" Height="600" Width="800">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="1*" />
             <RowDefinition Height="1*" />
             <RowDefinition Height="1*" />
             <RowDefinition Height="1*" />
@@ -23,25 +25,29 @@
             <TextBlock Text="Discrepency Time Millis" HorizontalAlignment="Right" FontSize="30" />
             <TextBox Text="{Binding DiscrepencyTimeMillis}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="1">
-            <TextBlock Text="Discrepency Time Millis" HorizontalAlignment="Right" FontSize="30" />
-            <TextBox Text="{Binding DiscrepencyTimeMillis}" />
-        </UniformGrid>
         <UniformGrid Grid.Row="2">
+            <TextBlock Text="Hold Time Millis" HorizontalAlignment="Right" FontSize="30" />
+            <TextBox Text="{Binding HoldTimeMillis}" />
+        </UniformGrid>
+        <UniformGrid Grid.Row="3">
+            <TextBlock Text="Hold Discrepency Time Millis" HorizontalAlignment="Right" FontSize="30" />
+            <TextBox Text="{Binding HoldDiscrepencyTimeMillis}" />
+        </UniformGrid>
+        <UniformGrid Grid.Row="4">
             <TextBlock Text="Key" HorizontalAlignment="Right" FontSize="30" />
             <TextBox Text="{Binding Key}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="3">
+        <UniformGrid Grid.Row="5">
             <TextBlock Text="Refresh Millis" HorizontalAlignment="Right" FontSize="30" />
             <TextBox Text="{Binding RefreshMillis}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="4">
+        <UniformGrid Grid.Row="6">
             <TextBlock Text="Use On Login" HorizontalAlignment="Right" FontSize="30" />
             <CheckBox IsChecked="{Binding UseOnLogin}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="5">
-            <Button Content="Accept" />
-            <Button Content="Cancel" />
+        <UniformGrid Grid.Row="7">
+            <Button Content="Accept" Command="{Binding AcceptCommand}" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" />
         </UniformGrid>
     </Grid>
 </Window>

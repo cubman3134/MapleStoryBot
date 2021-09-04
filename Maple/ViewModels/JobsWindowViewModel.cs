@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Maple.Data;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -38,7 +39,7 @@ namespace Maple.ViewModels
 
         private void EditJob()
         {
-            Windows.JobEdit jobEditWindow = new Windows.JobEdit();
+            Windows.JobEdit jobEditWindow = new Windows.JobEdit((Jobs)Enum.Parse(typeof(Jobs), SelectedJobData));
             IsActive = false;
             jobEditWindow.ShowDialog();
             IsActive = true;
@@ -56,7 +57,7 @@ namespace Maple.ViewModels
 
         private void CreateNewJob()
         {
-            Windows.JobEdit jobEditWindow = new Windows.JobEdit();
+            Windows.JobEdit jobEditWindow = new Windows.JobEdit(null);
             IsActive = false;
             jobEditWindow.ShowDialog();
             IsActive = true;
@@ -67,7 +68,8 @@ namespace Maple.ViewModels
             IsActive = true;
             IsClosing = false;
             var classExportLocation = System.Configuration.ConfigurationManager.AppSettings["ClassExportLocation"];
-            var jobs = Directory.GetDirectories(classExportLocation).ToList();
+            var jobsWithDirectories = Directory.GetFiles(classExportLocation).ToList();
+            var jobs = jobsWithDirectories.Select(x => { return x.Split('\\').Last(); }).ToList();
             JobsDataList = new ObservableCollection<string>(jobs);
             SelectedJobData = JobsDataList.FirstOrDefault();
         }

@@ -127,7 +127,7 @@ namespace Maple.Data
                 foreach (var curImageLocation in imageLocations)
                 {
                     var curGameLocation = MapleMath.PixelToPixelCoordinate(curImageLocation, curScreen.Width);
-                    var curMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curGameLocation, CurrentMapData);
+                    var curMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curGameLocation);
                     curDistance = MapleMath.PixelCoordinateDistance(curMinimapLocation, CurrentPlayerMinimapLocation);
                     if (curDistance < minDistance)
                     {

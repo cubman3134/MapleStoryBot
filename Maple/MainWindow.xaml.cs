@@ -126,11 +126,17 @@ namespace Maple
                 /*var results = new IronTesseract().Read(croppedImage);*/
                 // Flush all graphics changes to the bitmap
                 g.Flush();
-
-                this.Dispatcher.Invoke(() =>
+                try
                 {
-                    ImageBrushData.ImageSource = Data.Imaging.ImageSourceFromBitmap(croppedImage);
-                });
+                    this.Dispatcher.Invoke(() =>
+                    {
+                        ImageBrushData.ImageSource = Data.Imaging.ImageSourceFromBitmap(croppedImage);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    continue;
+                }
 
 
                 //bitmap.Save("test.jpg", ImageFormat.Jpeg);

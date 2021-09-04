@@ -61,12 +61,12 @@ namespace Maple.Data
 
     class CharacterData
     {
-        string CharacterName;
-        Jobs CharacterJob;
-        int Level;
-        public JumpData JumpDataData;
-        List<SkillData> SkillDataList;
-        int CharacterSelectionLocation;
+        public string CharacterName { get; set; }
+        public Jobs CharacterJob { get; set; }
+        int Level { get; set; }
+        public JumpData JumpDataData { get; set; }
+        public List<SkillData> SkillDataList { get; set; }
+        public int CharacterSelectionLocation { get; set; }
 
         public bool TryToUseSkill()
         {
@@ -77,6 +77,11 @@ namespace Maple.Data
                 return true;
             }
             return false;
+        }
+
+        public CharacterData()
+        {
+            SkillDataList = new List<SkillData>();
         }
     }
 }

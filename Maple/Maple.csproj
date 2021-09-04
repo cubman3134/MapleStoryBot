@@ -84,9 +84,11 @@
     <Compile Include="Data\MapleSerialPort.cs" />
     <Compile Include="Data\SkillData.cs" />
     <Compile Include="Models\ModelBase.cs" />
+    <Compile Include="ViewModels\JobEditViewModel.cs" />
     <Compile Include="ViewModels\JobsWindowViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\MapCreatorViewModel.cs" />
+    <Compile Include="ViewModels\SkillEditViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="Windows\JobEdit.xaml.cs">
       <DependentUpon>JobEdit.xaml</DependentUpon>

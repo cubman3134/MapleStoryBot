@@ -37,9 +37,9 @@ namespace Maple.Data
             return Math.Sqrt(Math.Pow(pixelCoordinate2.X - pixelCoordinate1.X, 2) + Math.Pow(pixelCoordinate2.Y - pixelCoordinate1.Y, 2));
         }
 
-        public static Vector2 MapCoordinatesToMiniMapCoordinates(Vector2 mapCoordinates, MapData mapData)
+        public static Vector2 MapCoordinatesToMiniMapCoordinates(Vector2 mapCoordinates)
         {
-            return new Vector2((int)(mapCoordinates.X * mapData.MinimapToPixelRatioX), (int)(mapCoordinates.Y * mapData.MinimapToPixelRatioY));
+            return new Vector2((int)(mapCoordinates.X * MapData.MinimapToPixelRatio), (int)(mapCoordinates.Y * MapData.MinimapToPixelRatio));
         }
 
         public static bool LocationWithinBounds(Vector2 locationToCheck, Vector2 minLocation, Vector2 maxLocation)
@@ -77,7 +77,7 @@ namespace Maple.Data
                 //string str = poly.ToString("N1");
                 //double[] weights = poly.Weights;
                 //double intercept = poly.Intercept; 
-
+                
                 // Finally, we can use this polynomial
                 // to predict values for the input data
                 pred = poly.Transform(inputs);

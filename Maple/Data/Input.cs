@@ -166,10 +166,21 @@ namespace Maple.Data
                 Input.MoveMouse(new Vector2(10, 100));
             }*/
             _mouseLocation = new Vector2(500, 500);
-            for (int i = 0; i < 100; i++)
+            Input.MoveMouse(new Vector2(10, 10));
+            for (int i = 0; i < 50; i++)
             {
-                Input.MoveMouse(new Vector2(-100, -100));
+                Input.MoveMouse(new Vector2(-100, 0));
             }
+            Input.MoveMouse(new Vector2(10, 0));
+            for (int i = 0; i < 50; i++)
+            {
+                Input.MoveMouse(new Vector2(0, -100));
+            }
+            for (int i = 0; i < 50; i++)
+            {
+                Input.MoveMouse(new Vector2(-100, 0));
+            }
+            Input.MoveMouse(new Vector2(-20, 0));
             _mouseLocation = new Vector2(0, 0);
         }
 

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Maple.Windows"
         mc:Ignorable="d"
-        Title="JobEdit" Height="450" Width="800">
+        Title="JobEdit" Height="500" Width="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="1*" />
@@ -13,23 +13,33 @@
             <RowDefinition Height="1*" />
             <RowDefinition Height="1*" />
             <RowDefinition Height="1*" />
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="1*" />
         </Grid.RowDefinitions>
-        <Button Content="Record Jumps" />
+        <Button Content="Record Jumps" Command="{Binding RecordJumpsCommand}" />
         <UniformGrid Grid.Row="1">
+            <TextBlock Text="Job" HorizontalAlignment="Right" FontSize="30" />
+            <ComboBox ItemsSource="{Binding PotentialJobs}" Text="{Binding SelectedJob}" />
+        </UniformGrid>
+        <UniformGrid Grid.Row="2">
             <TextBlock Text="Character Name" HorizontalAlignment="Right" FontSize="30" />
             <TextBox Text="{Binding CharacterName}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="2">
-            <TextBlock Text="Skills" HorizontalAlignment="Right" FontSize="30" />
-            <ComboBox ItemsSource="{Binding SkillDataList}" />
-        </UniformGrid>
         <UniformGrid Grid.Row="3">
+            <TextBlock Text="Skills" HorizontalAlignment="Right" FontSize="30" />
+            <ComboBox ItemsSource="{Binding SkillNamesDataList}" SelectedItem="{Binding SelectedSkillName}" />
+        </UniformGrid>
+        <UniformGrid Grid.Row="4">
+            <Button Content="Add Skill" Command="{Binding AddSkillCommand}"  />
+            <Button Content="Delete Skill" Command="{Binding DeleteSkillCommand}" />
+        </UniformGrid>
+        <UniformGrid Grid.Row="5">
             <TextBlock Text="Character Selection Location" HorizontalAlignment="Right" FontSize="30" />
             <TextBox Text="{Binding CharacterSelectionLocation}" />
         </UniformGrid>
-        <UniformGrid Grid.Row="4">
-            <Button Content="Accept" />
-            <Button Content="Cancel" />
+        <UniformGrid Grid.Row="6">
+            <Button Content="Accept" Command="{Binding AcceptCommand}" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" />
         </UniformGrid>
     </Grid>
 </Window>

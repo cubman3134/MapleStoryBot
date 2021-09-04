@@ -13,6 +13,8 @@ namespace Maple.Data
         public int DiscrepencyTimeMillis { get; set; }
         private int _currentDiscrepencyTimeMillis;
         public int HoldMillis { get; set; }
+        public int HoldDiscrepencyTimeMillis { get; set; }
+
         public char Key { get; set; }
         public int RefreshMillis { get; set; }
         public bool UseOnLogin { get; set; }
@@ -33,7 +35,7 @@ namespace Maple.Data
             LastUseTime = DateTime.Now;
         }
 
-        public SkillData(char key, int refreshMillis)
+        public SkillData()
         {
 
 

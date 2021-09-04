@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Maple.Data;
+using Maple.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,9 +21,14 @@ namespace Maple.Windows
     /// </summary>
     public partial class JobEdit : Window
     {
-        public JobEdit()
+        JobEditViewModel ModelData
+        {
+            get { return DataContext as JobEditViewModel; }
+        }
+        public JobEdit(Jobs? selectedJob)
         {
             InitializeComponent();
+            DataContext = new JobEditViewModel(selectedJob, this);
         }
     }
 }

@@ -93,8 +93,7 @@ namespace Maple.Data
 
         public List<MapPiece> MapPieceDataList;
 
-        public double MinimapToPixelRatioX { get; set; }
-        public double MinimapToPixelRatioY { get; set; }
+        public static double MinimapToPixelRatio = 0.043478260869565216;
 
         public MapData()
         {
