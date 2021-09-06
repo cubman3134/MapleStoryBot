@@ -111,7 +111,7 @@ namespace Maple.Data
                 int moveAmountY = rand.Next(Math.Min(randY, 0), Math.Max(randY + 1, 0));
                 locations.Add(new Vector2(moveAmountX, moveAmountY));
             }*/
-            var moveLocations = MapleMath.PolynomialLeastSquares(locations.OrderBy(x => x.X).ToList(), 2);
+            var moveLocations = MapleMath.PolynomialLeastSquares(locations.OrderBy(x => x.X).ToList());
             int originalIterator = 0;
             int iteratorChangeAmount = 1;
             int maxVal = moveLocations.Count;

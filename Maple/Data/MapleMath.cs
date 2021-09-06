@@ -22,6 +22,70 @@ namespace Maple.Data
 
     public class MapleMath
     {
+        internal class PolynomialRegressionData
+        {
+            private PolynomialRegression poly;
+            public PolynomialRegressionData(List<Vector2> pointData, int maxDegree = 100)
+            {
+                double[] inputs = pointData.Select(x => (double)x.X).ToArray();
+                double[] outputs = pointData.Select(x => (double)x.Y).ToArray();
+                poly = null;
+                double[] pred;
+                int degree = 1;
+                double error = 0.0;
+                do
+                {
+                    var ls = new PolynomialLeastSquares()
+                    {
+                        Degree = degree++
+                    };
+                    try
+                    {
+                        poly = ls.Learn(inputs, outputs);
+                    }
+                    catch (Exception ex)
+                    {
+                        continue;
+                    }
+                    //string str = poly.ToString("N1");
+                    //double[] weights = poly.Weights;
+                    //double intercept = poly.Intercept; 
+
+                    // Finally, we can use this polynomial
+                    // to predict values for the input data
+                    pred = poly.Transform(inputs);
+                    error = new SquareLoss(outputs).Loss(pred); // 0.0
+                    if (degree > maxDegree)
+                    {
+                        return;
+                    }
+                } while (error > 0.0001);
+            }
+
+            public List<Vector2> PredictData(List<int> xValues)
+            {
+                // We can create a learning algorithm
+                //var xVals = Enumerable.Range((int)inputs[0], (int)(inputs[inputs.Length - 1] - inputs[0]));
+                double[] pred = poly.Transform(xValues.Select(Convert.ToDouble).ToArray());
+                List<Vector2> returnData = new List<Vector2>();
+                for (int i = 0; i < pred.Length; i++)
+                {
+                    returnData.Add(new Vector2((int)xValues.ElementAt(i), (int)pred[i]));
+                }
+                return returnData;
+            }
+
+            public List<double> GetCoefficients()
+            {
+                if (poly == null || poly.Weights == null)
+                {
+                    return new List<double>();
+                }
+                List<double> coefficients = poly.Weights.ToList();
+                coefficients.Add(poly.Intercept);
+                return coefficients;
+            }
+        }
         public static Vector2 PixelToPixelCoordinate(int pixelLocation, int imageWidth)
         {
             return new Vector2(pixelLocation % imageWidth, pixelLocation / imageWidth);
@@ -60,38 +124,17 @@ namespace Maple.Data
             return new Vector2(totalX / coordinateDataList.Count, totalY / coordinateDataList.Count);
         }
 
-        public static List<Vector2> PolynomialLeastSquares(List<Vector2> pointData, int degree)
+        public static List<double> PolynomialRegressionCoefficients(List<Vector2> pointData)
         {
-            double[] inputs = pointData.Select(x => (double)x.X).ToArray();
-            double[] outputs = pointData.Select(x => (double)x.Y).ToArray();
-            double error = 0.0;
-            PolynomialRegression poly = null;
-            double[] pred;
-            do
-            {
-                var ls = new PolynomialLeastSquares()
-                {
-                    Degree = degree++
-                };
-                poly = ls.Learn(inputs, outputs);
-                //string str = poly.ToString("N1");
-                //double[] weights = poly.Weights;
-                //double intercept = poly.Intercept; 
-                
-                // Finally, we can use this polynomial
-                // to predict values for the input data
-                pred = poly.Transform(inputs);
-                error = new SquareLoss(outputs).Loss(pred); // 0.0
-            } while (error > 0.0001);
-            // We can create a learning algorithm
-            var xVals = Enumerable.Range((int)inputs[0], (int)(inputs[inputs.Length - 1] - inputs[0]));
-            pred = poly.Transform(xVals.Select(Convert.ToDouble).ToArray());
-            List<Vector2> returnData = new List<Vector2>();
-            for (int i = 0; i < pred.Length; i++)
-            {
-                returnData.Add(new Vector2((int)xVals.ElementAt(i), (int)pred[i]));
-            }
-            return returnData;
+            PolynomialRegressionData poly = new PolynomialRegressionData(pointData);
+            return poly.GetCoefficients();
+        }
+
+        public static List<Vector2> PolynomialLeastSquares(List<Vector2> pointData)
+        {
+            PolynomialRegressionData poly = new PolynomialRegressionData(pointData);
+            var xVals = Enumerable.Range((int)pointData[0].X, (int)(pointData[pointData.Count - 1].X - pointData[0].X));
+            return poly.PredictData(xVals.ToList());
         }
 
     }

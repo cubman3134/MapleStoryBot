@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
@@ -15,7 +16,7 @@ namespace Maple.ViewModels
 {
     public class MapCreatorViewModel : ViewModelBase
     {
-        public Bitmap CurrentImage { get; set; }
+        public SerializableBitmapImageWrapper CurrentImage { get; set; }
 
         MapData _mapInfoData;
         MapData MapInfoData
@@ -150,11 +151,16 @@ namespace Maple.ViewModels
             }
         }
 
+        public ObservableCollection<string> MapNamesDataList
+        {
+            get { return new ObservableCollection<string>(Enum.GetNames(typeof(MapNames)).ToList()); }
+        }
+
         public void ExportMap()
         {
             MapInfoData.MapName = (MapNames)Enum.Parse(typeof(MapNames), MapNameText);
-            var allImageText = Imaging.ReadTextFromImage(CurrentImage);
-            string fileName = string.Join("_", allImageText);
+            MapInfoData.MapNameImage = new SerializableBitmapImageWrapper(Imaging.CropImage(CurrentImage.BitmapData, Imaging.MapNameRect));
+            string fileName = MapInfoData.MapName.ToString();
             if (fileName.Length <= 0)
             {
                 return;
@@ -356,6 +362,7 @@ namespace Maple.ViewModels
         public MapCreatorViewModel()
         {
             base.InitializeData();
+            MapNameText = MapNamesDataList[0];
             RecordPlatformEdgeText = "Record Platform Edge";
             RecordRopeText = "Record Rope Edge";
             MapInfoData = new MapData();

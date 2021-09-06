@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -80,7 +81,8 @@ namespace Maple.Data
 
     public class MapData
     {
-        public MapNames MapName;
+        public MapNames MapName { get; set; }
+        public SerializableBitmapImageWrapper MapNameImage { get; set; }
         public static Dictionary<int, MapNames> LevelRangesToMapNames = new Dictionary<int, MapNames>()
         {
             { 145, MapNames.KerningTower2FCafe1 }
@@ -91,7 +93,7 @@ namespace Maple.Data
             { MapNames.KerningTower2FCafe1, new List<MobNames>() { MobNames.BlueRaspberryJellyJuice, MobNames.EnragedEspressoMachine } }
         };
 
-        public List<MapPiece> MapPieceDataList;
+        public List<MapPiece> MapPieceDataList { get; set; }
 
         public static double MinimapToPixelRatio = 0.043478260869565216;
 

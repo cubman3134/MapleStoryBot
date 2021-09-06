@@ -18,7 +18,7 @@
             </Canvas.Background>
         </Canvas>
         <UniformGrid Grid.Row="1" Rows="1">
-            <TextBox Text="{Binding MapNameText}" />
+            <ComboBox ItemsSource="{Binding MapNamesDataList}"  SelectedItem="{Binding MapNameText}" />
             <Button x:Name="RecordRope" Content="{Binding RecordRopeText}" IsEnabled="{Binding IsRecordRopeEnabled}" Command="{Binding RecordRopeCommand}" />
             <Button x:Name="RecordPlatformEdge" Content="{Binding RecordPlatformEdgeText}" IsEnabled="{Binding IsRecordPlatformEdgeEnabled}" Command="{Binding RecordPlatformEdgeCommand}" />
             <Button x:Name="RecordPixelToMapPixel" Content="Record Pixel to Map Pixel" Command="{Binding RecordPixelToMapPixelCommand}" />

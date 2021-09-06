@@ -72,17 +72,18 @@ namespace Maple.Windows
                 Bitmap src = new Bitmap(bounds.Width, bounds.Height);
                 //src = Imaging.ChangeBackgroundToBlack(src, 6);
                 //Bitmap croppedImage = src;
+                Graphics gr = Graphics.FromImage(src);
+                gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
                 Bitmap croppedImage = Data.Imaging.CropImage(src, Imaging.MiniMapRect);
 
                 //croppedImage = new Bitmap(Imaging.ColorReplace(croppedImage, 200, Color.Black, Color.White));
                 //croppedImage = new Bitmap(b.Width, b.Height);
                 this.Dispatcher.Invoke(() =>
                 {
-                    ModelData.CurrentImage = croppedImage;
+                    ModelData.CurrentImage = new SerializableBitmapImageWrapper(croppedImage);
                 });
                 
-                Graphics gr = Graphics.FromImage(croppedImage);
-                gr.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
+                
                 Graphics g = Graphics.FromImage(croppedImage);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;

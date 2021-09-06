@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -114,7 +115,11 @@ namespace Maple.ViewModels
 
         private void RecordJumps()
         {
-
+            Input.ResetMouse();
+            Input.ClickMouse();
+            Thread.Sleep(10);
+            Input.ReleaseMouse();
+            _characterData.JumpDataData = JumpData.GenerateJumpData();
         }
 
         private ICommand _acceptCommand;

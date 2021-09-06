@@ -6,16 +6,130 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.Serialization;
 using IronOcr;
 
 namespace Maple.Data
 {
+    [Serializable]
+    public struct SerializableBitmapImageWrapper : ISerializable
+    {
+        readonly BitmapImage bitmapImage;
+
+        public static implicit operator BitmapImage(SerializableBitmapImageWrapper wrapper)
+        {
+            return wrapper.BitmapImage;
+        }
+
+        public static implicit operator SerializableBitmapImageWrapper(BitmapImage bitmapImage)
+        {
+            return new SerializableBitmapImageWrapper(BitmapImageToBitmap(bitmapImage));
+        }
+
+        private static Bitmap BitmapImageToBitmap(BitmapImage bitmapImageData)
+        {
+            using (MemoryStream outStream = new MemoryStream())
+            {
+                BitmapEncoder enc = new BmpBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bitmapImageData));
+                enc.Save(outStream);
+                System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(outStream);
+
+                return new Bitmap(bitmap);
+            }
+        }
+
+        public BitmapImage BitmapImage { get { return bitmapImage; } }
+
+        public Bitmap BitmapData { get { return BitmapImageToBitmap(BitmapImage); } }
+
+        public SerializableBitmapImageWrapper(Bitmap bitmapData)
+        {
+            var memory = new MemoryStream();
+            bitmapData.Save(memory, ImageFormat.Png);
+            memory.Position = 0;
+            var bitmapImage = new BitmapImage();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = memory;
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
+            bitmapImage.Freeze();
+            memory = null;
+            this.bitmapImage = bitmapImage;
+        }
+
+        public SerializableBitmapImageWrapper(SerializationInfo info, StreamingContext context)
+        {
+            byte[] imageBytes = (byte[])info.GetValue("image", typeof(byte[]));
+            if (imageBytes == null)
+                bitmapImage = null;
+            else
+            {
+                using (var ms = new MemoryStream(imageBytes))
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.StreamSource = ms;
+                    bitmap.EndInit();
+                    bitmapImage = bitmap;
+                }
+            }
+        }
+
+        #region ISerializable Members
+
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            byte[] imageBytes;
+            if (bitmapImage == null)
+                imageBytes = null;
+            else
+                using (var ms = new MemoryStream())
+                {
+                    BitmapImage.SaveToPng(ms);
+                    imageBytes = ms.ToArray();
+                }
+            info.AddValue("image", imageBytes);
+        }
+
+        #endregion
+    }
+
+    public static class BitmapHelper
+    {
+        public static void SaveToPng(this BitmapSource bitmap, Stream stream)
+        {
+            var encoder = new PngBitmapEncoder();
+            SaveUsingEncoder(bitmap, stream, encoder);
+        }
+
+        public static void SaveUsingEncoder(this BitmapSource bitmap, Stream stream, BitmapEncoder encoder)
+        {
+            BitmapFrame frame = BitmapFrame.Create(bitmap);
+            encoder.Frames.Add(frame);
+            encoder.Save(stream);
+        }
+
+        public static BitmapImage FromUri(string path)
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(path);
+            bitmap.EndInit();
+            return bitmap;
+        }
+    }
+
     public class PhotoWithTimestamp
     {
         public Bitmap Photo;
@@ -80,6 +194,7 @@ namespace Maple.Data
     {
         public static Rectangle ChatBoxRect = new Rectangle(6, 620, 385, 176);
         public static Rectangle MiniMapRect = new Rectangle(0, 0, 350, 200);
+        public static Rectangle MapNameRect = new Rectangle(45, 20, 40, 30);
 
         public enum ImageFiles
         {
@@ -273,7 +388,7 @@ namespace Maple.Data
             return false;
         }
 
-        private static List<Color> GetColorsFromBmp(Bitmap bmp)
+        public static List<Color> GetColorsFromBmp(Bitmap bmp)
         {
             List<Color> colorData = new List<Color>(new Color[bmp.Width * bmp.Height]);
             BitmapData bmData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
