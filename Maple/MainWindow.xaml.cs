@@ -26,6 +26,7 @@ using Maple.Data;
 using Maple.ViewModels;
 using System.ComponentModel;
 using System.Configuration;
+using Newtonsoft.Json;
 
 namespace Maple
 {
@@ -118,7 +119,7 @@ namespace Maple
 
                     foreach (var curLocation in locations)
                     {
-                        Input.SetMouseLocation(MapleMath.PixelToPixelCoordinate(curLocation, croppedImage.Width));
+                        //Input.SetMouseLocation(MapleMath.PixelToPixelCoordinate(curLocation, croppedImage.Width));
                         //g.DrawRectangle(new Pen(Color.Red, 10), new Rectangle(curLocation.Center.X - 10, curLocation.Center.Y - 10, 4 + 20, 6 + 20));
                     }
                     
@@ -152,7 +153,8 @@ namespace Maple
             CameraUpdateThread = new Thread(CameraUpdate);
             CameraUpdateThread.Start();
             Input.InitializeInputs();
-            
+            GameData gameDataData = new GameData();
+            gameDataData.GameBrain();
             //Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
             //Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
 

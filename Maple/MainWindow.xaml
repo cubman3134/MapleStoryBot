@@ -18,8 +18,9 @@
             </Canvas.Background>
         </Canvas>
         <UniformGrid Grid.Row="1" Rows="1">
-            <Button Content="Create New Map" Command="{Binding CreateNewMapCommand}" />
+            <Button Content="Alter Maps" Command="{Binding CreateNewMapCommand}" />
             <Button Content="Alter Jobs" Command="{Binding AlterJobsCommand}" />
+            <Button Content="Queue Tasks" Command="{Binding QueueTasksCommand}" />
             <Button Content="Check Statistics" />
         </UniformGrid>
     </Grid>

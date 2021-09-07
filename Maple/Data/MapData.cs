@@ -31,25 +31,79 @@ namespace Maple.Data
         Level195 = 195, // twilight perion
     }*/
 
+    public class JoiningJumpDataPoint
+    {
+        public JumpTypes JumpType;
+        public Vector2 JumpLocation;
+        public Vector2 LandLocation;
+        public bool TurnedLeft;
+        public List<int> MillisecondDelays;
+
+        public JoiningJumpDataPoint(JumpTypes jumpType, Vector2 jumpLocation, bool turnedLeft, List<int> millisecondDelays, Vector2 landLocation)
+        {
+            JumpType = jumpType;
+            JumpLocation = jumpLocation;
+            TurnedLeft = turnedLeft;
+            MillisecondDelays = millisecondDelays;
+            LandLocation = landLocation;
+        }
+    }
+
+    public class MapPieceLink
+    {
+        public MapPiece JoiningMapPiece;
+        public List<JoiningJumpDataPoint> JoiningJumpDataList;
+
+        public double MinimumDistance
+        {
+            get
+            {
+                return JoiningJumpDataList.Select(x => MapleMath.PixelCoordinateDistance(x.JumpLocation, x.LandLocation)).OrderBy(x => x).First();
+            }
+        }
+
+        public MapPieceLink(MapPiece joiningMapPiece)
+        {
+            JoiningMapPiece = joiningMapPiece;
+            JoiningJumpDataList = new List<JoiningJumpDataPoint>();
+        }
+
+        public void AddJoiningJumpData(JumpTypes jumpType, Vector2 jumpLocation, bool turnedLeft, List<int> millisecondDelays, Vector2 landLocation)
+        {
+            JoiningJumpDataList.Add(new JoiningJumpDataPoint(jumpType, jumpLocation, turnedLeft, millisecondDelays, landLocation));
+        }
+    }
+
     public class MapPiece
     {
         public MapPieceTypes MapPieceType { get; set; }
         public Vector2 Beginning { get; set; }
         public Vector2 End { get; set; }
 
+        public bool Visited;
+
+        public List<MapPieceLink> MapPieceLinkDataList;
+
         public static Vector2 CurrentMinimapLocation { get; set; }
         public static Vector2 CurrentPixelLocation { get; set; }
+
+        public MapPiece()
+        {
+            MapPieceLinkDataList = new List<MapPieceLink>();
+        }
 
         public MapPiece(MapPieceTypes mapPieceType, Vector2 beginning, Vector2 end)
         {
             MapPieceType = mapPieceType;
             Beginning = beginning;
             End = end;
+            MapPieceLinkDataList = new List<MapPieceLink>();
         }
 
         public MapPiece(MapPieceTypes mapPieceType)
         {
             MapPieceType = mapPieceType;
+            MapPieceLinkDataList = new List<MapPieceLink>();
         }
 
         public void SetBeginningOrEnd(Vector2 value)
@@ -77,6 +131,40 @@ namespace Maple.Data
                 End = value;
             }
         }
+
+        public bool GetYValueAtXValue(double xValue, out double yValue)
+        {
+            yValue = 0;
+            if (!(xValue >= Beginning.X && xValue <= End.X))
+            {
+                return false;
+            }
+            double changeVal = xValue - Beginning.X;
+            double bigXChangeVal = End.X - Beginning.X;
+            double bigYChangeVal = End.Y - Beginning.Y;
+            double yAngleRadians = Math.Tan(bigYChangeVal / bigXChangeVal);
+            yValue = (Math.Tanh(yAngleRadians) * changeVal) + Beginning.Y;
+            return true;
+        }
+
+        public bool LocationWithinBounds(Vector2 locationData, out Vector2 landData)
+        {
+            landData = null;
+            if (!GetYValueAtXValue(locationData.X, out double mapDataYValue))
+            {
+                return false;
+            }
+            if (locationData.Y < mapDataYValue)
+            {
+                return false;
+            }
+            if (Math.Abs(locationData.Y - mapDataYValue) > 1.0)
+            {
+                return false;
+            }
+            landData = new Vector2(locationData.X, mapDataYValue);
+            return true;
+        }
     }
 
     public class MapData
@@ -97,6 +185,103 @@ namespace Maple.Data
 
         public static double MinimapToPixelRatio = 0.043478260869565216;
 
+        public void SetupConjoiningMapPiecesBasedOnJumpData(JumpData characterJumpData)
+        {
+            double curY;
+            List<Vector2> enumeratedJumpValues;
+            Vector2 leftCheck, rightCheck, landData;
+            bool successful, turnedLeft = false;
+            characterJumpData.JumpInformationDataList.Add(new JumpInformation(JumpTypes.JumpDown));
+            foreach (var curMapPiece in MapPieceDataList)
+            {
+                foreach (var checkMapPiece in MapPieceDataList)
+                {
+                    if (checkMapPiece.Beginning.X == curMapPiece.Beginning.X && checkMapPiece.Beginning.Y == curMapPiece.Beginning.Y)
+                    {
+                        continue;
+                    }
+                    MapPieceLink curMapPieceLink = new MapPieceLink(checkMapPiece);
+                    if (curMapPiece.MapPieceType == MapPieceTypes.Rope)
+                    {
+                        if (checkMapPiece.LocationWithinBounds(curMapPiece.End, out landData))
+                        {
+                            curMapPieceLink.AddJoiningJumpData(JumpTypes.ArrowJump, curMapPiece.End, turnedLeft, new List<int>() { 50 }, landData);
+                        }
+                    }
+                    else
+                    {
+                        // exhaustive
+                        foreach (var curX in Enumerable.Range((int)curMapPiece.Beginning.X, (int)curMapPiece.End.X - (int)curMapPiece.Beginning.X))
+                        {
+                            if (curMapPiece.GetYValueAtXValue(curX, out curY))
+                            {
+                                
+                                foreach (var curJumpInformationData in characterJumpData.JumpInformationDataList)
+                                {
+                                    if (curJumpInformationData.JumpType == JumpTypes.JumpDown)
+                                    {
+                                        double highestYValue = 0;
+                                        MapPiece highestMapPiece = null;
+                                        foreach (var curInnerCheckMapPiece in MapPieceDataList)
+                                        {
+                                            if (curInnerCheckMapPiece.GetYValueAtXValue(curX, out double curInnerCheckMapPieceY))
+                                            {
+                                                if (curInnerCheckMapPieceY < curY)
+                                                {
+                                                    if (highestMapPiece == null || highestYValue < curInnerCheckMapPieceY)
+                                                    {
+                                                        highestMapPiece = curInnerCheckMapPiece;
+                                                        highestYValue = curInnerCheckMapPieceY;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (highestMapPiece != null && highestMapPiece.Beginning.X == checkMapPiece.Beginning.X && highestMapPiece.Beginning.Y == checkMapPiece.Beginning.Y)
+                                        {
+                                            curMapPieceLink.AddJoiningJumpData(JumpTypes.JumpDown, new Vector2(curX, curY), true, new List<int>() { 50 }, new Vector2(curX, highestYValue));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        foreach (var curMillisecondDelaysToEquationCoefficients in curJumpInformationData.MillisecondDelaysToEquationCoefficients)
+                                        {
+                                            enumeratedJumpValues = curMillisecondDelaysToEquationCoefficients.EnumerateValues();
+                                            foreach (var curEnumeratedJumpValue in enumeratedJumpValues)
+                                            {
+                                                leftCheck = new Vector2(curX - curEnumeratedJumpValue.X, curY + curEnumeratedJumpValue.Y);
+                                                rightCheck = new Vector2(curX + curEnumeratedJumpValue.X, curY + curEnumeratedJumpValue.Y);
+                                                successful = false;
+                                                if (checkMapPiece.LocationWithinBounds(leftCheck, out landData))
+                                                {
+                                                    turnedLeft = true;
+                                                    successful = true;
+                                                }
+                                                else if (checkMapPiece.LocationWithinBounds(rightCheck, out landData))
+                                                {
+                                                    turnedLeft = false;
+                                                    successful = true;
+                                                }
+                                                if (successful)
+                                                {
+                                                    curMapPieceLink.AddJoiningJumpData(curJumpInformationData.JumpType, new Vector2(curX, curY), turnedLeft, curMillisecondDelaysToEquationCoefficients.MillisecondDelays, landData);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (curMapPieceLink.JoiningJumpDataList.Any())
+                    {
+                        curMapPiece.MapPieceLinkDataList.Add(curMapPieceLink);
+                    }
+                }
+            }
+        }
+
         public MapData()
         {
             MapPieceDataList = new List<MapPiece>();
@@ -104,14 +289,26 @@ namespace Maple.Data
 
         public MapPiece GetCurrentMapPiece(Vector2 objectLocation)
         {
+            double bestYDistance = 0;
+            MapPiece bestMapPiece = null;
             foreach (var curMapPiece in MapPieceDataList)
             {
-                if (MapleMath.LocationWithinBounds(objectLocation, curMapPiece.Beginning, curMapPiece.End))
+                if (!curMapPiece.GetYValueAtXValue(objectLocation.X, out double yValue))
                 {
-                    return curMapPiece;
+                    continue;
+                }
+                if (objectLocation.Y < yValue)
+                {
+                    continue;
+                }
+                double curYDistance = Math.Abs(objectLocation.Y - yValue);
+                if (bestMapPiece == null || curYDistance < bestYDistance)
+                {
+                    bestMapPiece = curMapPiece;
+                    bestYDistance = curYDistance;
                 }
             }
-            return null;
+            return bestMapPiece;
         }
     }
 }

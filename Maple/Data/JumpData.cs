@@ -13,7 +13,8 @@ namespace Maple.Data
         ArrowJumpUpUp,
         ArrowJump,
         ArrowJumpJump,
-        ArrowFlashJump
+        ArrowFlashJump,
+        JumpDown
     }
 
     public class DelaysAndEquationCoefficients
@@ -21,10 +22,44 @@ namespace Maple.Data
         public List<int> MillisecondDelays { get; set; }
         public List<double> EquationCoefficients { get; set; }
 
-        public DelaysAndEquationCoefficients(List<int> millisecondDelays, List<double> equationCoefficients)
+        public double MaxX;
+
+        public double MaxY;
+
+        public double GetYValueFromXValue(double xValue)
+        {
+            double curYValue = EquationCoefficients[EquationCoefficients.Count - 1];
+            int curNumXs = 1;
+            for (int i = EquationCoefficients.Count - 2; i >= 0; i--)
+            {
+                double curVal = 0;
+                for (int j = 0; j < curNumXs; j++)
+                {
+                    curVal = curVal * xValue;
+                }
+                curVal = curVal * EquationCoefficients[i];
+                curYValue += curVal;
+                curNumXs++;
+            }
+            return curYValue;
+        }
+
+        public List<Vector2> EnumerateValues()
+        {
+            List<Vector2> returnData = new List<Vector2>();
+            for (int i = 0; i < MaxX; i++) 
+            {
+                returnData.Add(new Vector2(i, GetYValueFromXValue(i)));
+            }
+            return returnData;
+        }
+
+        public DelaysAndEquationCoefficients(List<int> millisecondDelays, List<double> equationCoefficients, double maxX, double maxY)
         {
             MillisecondDelays = millisecondDelays;
             EquationCoefficients = equationCoefficients;
+            MaxX = maxX;
+            MaxY = maxY;
         }
     }
 
@@ -40,9 +75,9 @@ namespace Maple.Data
             MillisecondDelaysToEquationCoefficients = new List<DelaysAndEquationCoefficients>();
         }
 
-        public void AddToDelaysAndEquationCoefficients(Tuple<List<int>, List<double>> newData)
+        public void AddToDelaysAndEquationCoefficients(Tuple<List<int>, List<double>, double, double> newData)
         {
-            MillisecondDelaysToEquationCoefficients.Add(new DelaysAndEquationCoefficients(newData.Item1, newData.Item2));
+            MillisecondDelaysToEquationCoefficients.Add(new DelaysAndEquationCoefficients(newData.Item1, newData.Item2, newData.Item3, newData.Item4));
         }
     }
 
@@ -53,7 +88,8 @@ namespace Maple.Data
             { JumpTypes.ArrowJumpUpUp, 5 },
             { JumpTypes.ArrowJump, 1 },
             { JumpTypes.ArrowJumpJump, 3 },
-            { JumpTypes.ArrowFlashJump, 1 }
+            { JumpTypes.ArrowFlashJump, 1 },
+            { JumpTypes.JumpDown, 3 }
         };
 
         public static List<int> MilliDelays = new List<int>() { 20, 50, 100 };
@@ -82,7 +118,7 @@ namespace Maple.Data
             foreach (var curJumpType in (JumpTypes[]) Enum.GetValues(typeof(JumpTypes)))
             {
                 jumpDataData.JumpInformationDataList.Add(new JumpInformation(curJumpType));
-                List<Tuple<List<int>, List<double>>> equationCoefficientData = GenerateEquationCoefficientsForJumpType(curJumpType);
+                List<Tuple<List<int>, List<double>, double, double>> equationCoefficientData = GenerateEquationCoefficientsForJumpType(curJumpType);
                 foreach (var curEquationCoefficientData in equationCoefficientData)
                 {
                     jumpDataData.JumpInformationDataList.Last().AddToDelaysAndEquationCoefficients(curEquationCoefficientData);
@@ -114,11 +150,12 @@ namespace Maple.Data
             return ableToIncrement;
         }
 
-        private static List<Tuple<List<int>, List<double>>> GenerateEquationCoefficientsForJumpType(JumpTypes jumpType)
+        private static List<Tuple<List<int>, List<double>, double, double>> GenerateEquationCoefficientsForJumpType(JumpTypes jumpType)
         {
             int numberOfDelays = JumpTypesToNumberOfPauses[jumpType];
             List<int> curDelays = new List<int>();
-            var returnData = new List<Tuple<List<int>, List<double>>>();
+            var returnData = new List<Tuple<List<int>, List<double>, double, double>>();
+            double maxX, maxY;
             for (int i = 0; i < numberOfDelays; i++)
             {
                 curDelays.Add(0);
@@ -127,18 +164,18 @@ namespace Maple.Data
             {
                 var millisecondDelays = curDelays.Select(x => { return MilliDelays[x]; }).ToList();
                 Console.WriteLine($"Generating equation coefficients for jump type [{jumpType.ToString()}] and iterators [{string.Join(", ", curDelays)}]");
-                var equationCoefficients = GenerateEquationCoefficients(jumpType, millisecondDelays);
+                var equationCoefficients = GenerateEquationCoefficients(jumpType, millisecondDelays, out maxX, out maxY);
                 if (equationCoefficients == null || equationCoefficients.Count == 0)
                 {
                     continue;
                 }
-                returnData.Add(new Tuple<List<int>, List<double>>(millisecondDelays, equationCoefficients));
+                returnData.Add(new Tuple<List<int>, List<double>, double, double>(millisecondDelays, equationCoefficients, maxX, maxY));
             } 
             while (IncrementIterators(ref curDelays, MilliDelays.Count - 1));
             return returnData;
         }
 
-        private static void TryToJump(JumpTypes jumpType, List<int> millisecondDelays)
+        public static void TryToJump(JumpTypes jumpType, List<int> millisecondDelays)
         {
             switch (jumpType)
             {
@@ -175,11 +212,22 @@ namespace Maple.Data
                     Thread.Sleep(millisecondDelays[4]);
                     Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ALT);
                     break;
+                case JumpTypes.JumpDown:
+                    Input.StartInput(Input.SpecialCharacters.KEY_DOWN_ARROW);
+                    Thread.Sleep(millisecondDelays[0]);
+                    Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ALT);
+                    Thread.Sleep(millisecondDelays[1]);
+                    Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ALT);
+                    Thread.Sleep(millisecondDelays[2]);
+                    Input.StopInput(Input.SpecialCharacters.KEY_DOWN_ARROW);
+                    break;
             }
         }
 
-        private static List<double> GenerateEquationCoefficients(JumpTypes jumpType, List<int> millisecondDelays)
+        private static List<double> GenerateEquationCoefficients(JumpTypes jumpType, List<int> millisecondDelays, out double maxX, out double maxY)
         {
+            maxX = 0;
+            maxY = 0;
             PhotoTaker.StartTakingImages(75);
             Thread.Sleep(100);
             Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
@@ -200,7 +248,7 @@ namespace Maple.Data
                 {
                     continue;
                 }
-                Vector2 cur = MapleMath.PixelToPixelCoordinate(locations[0], curMinimap.Width);
+                Vector2 cur = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(locations[0], curMinimap.Width), curMinimap.Height);
                 switch (status)
                 {
                     case GenerateEquationCoefficientsStatuses.Unstarted:
@@ -255,6 +303,8 @@ namespace Maple.Data
             {
                 return new List<double>();
             }
+            maxX = dataPoints.Select(x => x.X).Max();
+            maxY = dataPoints.Select(x => x.Y).Max();
             return MapleMath.PolynomialRegressionCoefficients(dataPoints);
         }
     }

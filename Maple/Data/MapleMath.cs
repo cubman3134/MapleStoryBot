@@ -11,9 +11,9 @@ namespace Maple.Data
 {
     public class Vector2
     {
-        public int X;
-        public int Y;
-        public Vector2(int x, int y)
+        public double X;
+        public double Y;
+        public Vector2(double x, double y)
         {
             X = x;
             Y = y;
@@ -86,14 +86,68 @@ namespace Maple.Data
                 return coefficients;
             }
         }
+
+        public static List<MapPiece> FindRoute(MapData map, MapPiece sourceNode, MapPiece destinationNode)
+        {
+            List<MapPiece> path = new List<MapPiece>();
+            path.Add(sourceNode);
+
+            MapPiece currentNode = sourceNode;
+            while (true)
+            {
+                //get all neighbors of current-node (nodes within transmission range)
+                List<MapPiece> allNeighbors = currentNode.MapPieceLinkDataList.Select(x => x.JoiningMapPiece).ToList();
+
+                //remove neighbors that are already added to path
+                IEnumerable<MapPiece> neighbors = from neighbor in allNeighbors
+                                                  where !path.Contains(neighbor)
+                                                  select neighbor;
+
+                //stop if no neighbors or destination reached
+                if (neighbors.Count() == 0) break;
+                if (neighbors.Contains(destinationNode))
+                {
+                    path.Add(destinationNode);
+                    break;
+                }
+
+                //choose next-node (the neighbor with shortest distance to destination)
+                double bestMinDist = double.MaxValue;
+                MapPiece nearestNode = null;
+                foreach (var curNeighbor in neighbors)
+                {
+                    var curMapPieceLink = curNeighbor.MapPieceLinkDataList.Where(x => x.JoiningMapPiece.Beginning.X == destinationNode.Beginning.X && x.JoiningMapPiece.Beginning.Y == destinationNode.Beginning.Y).FirstOrDefault();
+                    if (curMapPieceLink == null)
+                    {
+                        continue;
+                    }
+                    var curMinDist = curMapPieceLink.MinimumDistance;
+                    if (curMinDist < bestMinDist)
+                    {
+                        bestMinDist = curMinDist;
+                        nearestNode = curNeighbor;
+                    }
+                }
+                path.Add(nearestNode);
+                currentNode = nearestNode;
+            }
+
+            return (path);
+        }
+
         public static Vector2 PixelToPixelCoordinate(int pixelLocation, int imageWidth)
         {
             return new Vector2(pixelLocation % imageWidth, pixelLocation / imageWidth);
         }
 
+        public static Vector2 CorrectImageHeight(Vector2 pixelCoordinate, int imageHeight)
+        {
+            return new Vector2(pixelCoordinate.X, Math.Abs(pixelCoordinate.Y - imageHeight));
+        }
+
         public static int PixelCoordinateToPixel(Vector2 pixelLocation, int imageWidth)
         {
-            return pixelLocation.Y * imageWidth + pixelLocation.X;
+            return (int)(pixelLocation.Y * imageWidth + pixelLocation.X);
         }
 
         public static double PixelCoordinateDistance(Vector2 pixelCoordinate1, Vector2 pixelCoordinate2)
@@ -118,8 +172,8 @@ namespace Maple.Data
             int totalY = 0;
             foreach (var curCoordinate in coordinateDataList)
             {
-                totalX += curCoordinate.X;
-                totalY += curCoordinate.Y;
+                totalX += (int)curCoordinate.X;
+                totalY += (int)curCoordinate.Y;
             }
             return new Vector2(totalX / coordinateDataList.Count, totalY / coordinateDataList.Count);
         }

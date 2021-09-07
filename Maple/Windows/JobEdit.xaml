@@ -19,7 +19,7 @@
         <Button Content="Record Jumps" Command="{Binding RecordJumpsCommand}" />
         <UniformGrid Grid.Row="1">
             <TextBlock Text="Job" HorizontalAlignment="Right" FontSize="30" />
-            <ComboBox ItemsSource="{Binding PotentialJobs}" Text="{Binding SelectedJob}" />
+            <ComboBox ItemsSource="{Binding PotentialJobs}" SelectedItem="{Binding SelectedJob, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </UniformGrid>
         <UniformGrid Grid.Row="2">
             <TextBlock Text="Character Name" HorizontalAlignment="Right" FontSize="30" />

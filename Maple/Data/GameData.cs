@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -65,6 +67,7 @@ namespace Maple.Data
         public CharacterData CurrentCharacterData;
         private Thread _mobFinderThread;
         private Thread _nearbyMobThread;
+        private Thread _minimapThread;
 
         int NumMobsAtNextCluster;
         Vector2 NextMobClusterMinimapLocation;
@@ -101,7 +104,7 @@ namespace Maple.Data
                 if (Imaging.FindBitmap(new List<Bitmap>() { playerImage }, miniMapScreen, 20, out List<int> locations))
                 {
                     // hope and pray there is only one player location
-                    CurrentPlayerMinimapLocation = MapleMath.PixelToPixelCoordinate(locations[0], miniMapScreen.Width);
+                    CurrentPlayerMinimapLocation = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(locations[0], miniMapScreen.Width), miniMapScreen.Height);
                 }
             }
             
@@ -126,7 +129,7 @@ namespace Maple.Data
             {
                 foreach (var curImageLocation in imageLocations)
                 {
-                    var curGameLocation = MapleMath.PixelToPixelCoordinate(curImageLocation, curScreen.Width);
+                    var curGameLocation = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(curImageLocation, curScreen.Width), curScreen.Height);
                     var curMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curGameLocation);
                     curDistance = MapleMath.PixelCoordinateDistance(curMinimapLocation, CurrentPlayerMinimapLocation);
                     if (curDistance < minDistance)
@@ -221,6 +224,8 @@ namespace Maple.Data
         public void GameBrain()
         {
             _mobFinderThread = new Thread(NewMobFinderThreadWorker);
+            _minimapThread = new Thread(MinimapThreadWorker);
+            _minimapThread.Start();
             Vector2 nextMobCluster;
             if (!Imaging.GetCurrentGameScreen(out Bitmap curGameScreen))
             {
@@ -235,11 +240,21 @@ namespace Maple.Data
             {
 
             }
+            string fileLocation = System.Configuration.ConfigurationManager.AppSettings["ClassExportLocation"];
+            string fullPath = Path.Combine(fileLocation, Jobs.DemonAvenger.ToString());
+            string jsonString = File.ReadAllText(fullPath);
+            CurrentCharacterData = JsonConvert.DeserializeObject<CharacterData>(jsonString);
+            fileLocation = System.Configuration.ConfigurationManager.AppSettings["MapExportLocation"];
+            fullPath = Path.Combine(fileLocation, MapNames.KerningTower2FCafe1.ToString());
+            jsonString = File.ReadAllText(fullPath);
+            CurrentMapData = JsonConvert.DeserializeObject<MapData>(jsonString);
+            CurrentMapData.SetupConjoiningMapPiecesBasedOnJumpData(CurrentCharacterData.JumpDataData);
             if (InGameStatus == InGameStatuses.Mobbing)
             {
                 
-                _mobFinderThread.Start();
+                //_mobFinderThread.Start();
             }
+            Random rand = new Random();
             while (InGameStatus == InGameStatuses.Mobbing)
             {
                 while (CloseMobsStillAlive)
@@ -254,8 +269,62 @@ namespace Maple.Data
                     }
                     CurrentCharacterData.TryToUseSkill();
                 }
+                //CurrentPlayerMinimapLocation = new Vector2(20, 93);
+                NextMobClusterMinimapLocation = new Vector2(140, 120); // test todo
                 nextMobCluster = NextMobClusterMinimapLocation;
-                
+                MapPiece targetMapPiece = CurrentMapData.GetCurrentMapPiece(nextMobCluster);
+                MapPiece currentMapPiece = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
+                List<MapPiece> mapPieceDataList = MapleMath.FindRoute(CurrentMapData, currentMapPiece, targetMapPiece);
+                Console.WriteLine("starting!!");
+                for (int curMapPieceIterator = 0; curMapPieceIterator < mapPieceDataList.Count; curMapPieceIterator++)
+                {
+                    if (curMapPieceIterator == mapPieceDataList.Count - 1)
+                    {
+                        // todo
+                        break;
+                    }
+                    var curMapPieceLink = mapPieceDataList[curMapPieceIterator].MapPieceLinkDataList.Where(x => x.JoiningMapPiece.Beginning.X == mapPieceDataList[curMapPieceIterator + 1].Beginning.X
+                        && x.JoiningMapPiece.Beginning.Y == mapPieceDataList[curMapPieceIterator + 1].Beginning.Y).First();
+                    int randJumpSelection = rand.Next(0, curMapPieceLink.JoiningJumpDataList.Count);
+                    JoiningJumpDataPoint joiningJumpData = curMapPieceLink.JoiningJumpDataList[randJumpSelection];
+                    if (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        while (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
+                        {
+                            Thread.Sleep(50);
+                        }
+                        Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                    }
+                    else if (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        while (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
+                        {
+                            Thread.Sleep(50);
+                        }
+                        Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                    }
+                    if (joiningJumpData.TurnedLeft)
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                    }
+                    else
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                    }
+                    Thread.Sleep(10);
+                    JumpData.TryToJump(joiningJumpData.JumpType, joiningJumpData.MillisecondDelays);
+                    Thread.Sleep(10);
+                    if (joiningJumpData.TurnedLeft)
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                    }
+                    else
+                    {
+                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                    }
+                }
             }
             _mobFinderThread.Join();
             

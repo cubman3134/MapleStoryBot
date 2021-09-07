@@ -19,7 +19,7 @@ namespace Maple.ViewModels
         public SerializableBitmapImageWrapper CurrentImage { get; set; }
 
         MapData _mapInfoData;
-        MapData MapInfoData
+        public MapData MapInfoData
         {
             get { return _mapInfoData; }
             set { _mapInfoData = value; }

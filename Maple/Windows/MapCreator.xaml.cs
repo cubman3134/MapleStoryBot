@@ -102,7 +102,7 @@ namespace Maple.Windows
                 {
                     if (locations?.Count > 0)
                     {
-                        var curLocation = MapleMath.PixelToPixelCoordinate(locations[0], croppedImage.Width);
+                        var curLocation = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(locations[0], croppedImage.Width), croppedImage.Height);
                         g.DrawString($"x: {curLocation.X} y: {curLocation.Y}", new Font("Arial", 18), Brushes.Red, new Rectangle(0, 0, croppedImage.Width, croppedImage.Height), format);
                         this.Dispatcher.Invoke(() =>
                         {

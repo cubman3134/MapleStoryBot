@@ -37,7 +37,7 @@ namespace Maple.Data
             List<MobCluster> mobClusters = new List<MobCluster>();
             foreach (var curMobLocation in mobLocations)
             {
-                var curCoordinate = MapleMath.PixelToPixelCoordinate(curMobLocation, imageWidth);
+                var curCoordinate = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(curMobLocation, imageWidth), imageHeight);
                 bool added = false;
                 foreach (var curMobCluster in mobClusters)
                 {

@@ -18,15 +18,15 @@ namespace Maple.ViewModels
     {
         private CharacterData _characterData;
 
-        public ObservableCollection<string> PotentialJobs
+        public ObservableCollection<Jobs> PotentialJobs
         {
-            get { return new ObservableCollection<string>(Enum.GetNames(typeof(Jobs))); }
+            get { return new ObservableCollection<Jobs>((Jobs[])Enum.GetValues(typeof(Jobs))); }
         }
-
-        public string SelectedJob
+        
+        public Jobs SelectedJob
         {
-            get { return _characterData.CharacterJob.ToString(); }
-            set { _characterData.CharacterJob = (Jobs)Enum.Parse(typeof(Jobs), value); NotifyPropertyChanged(); }
+            get { return _characterData.CharacterJob; }
+            set { _characterData.CharacterJob = value; NotifyPropertyChanged(); }
         }
 
         public string CharacterName
@@ -164,6 +164,7 @@ namespace Maple.ViewModels
             if (selectedJob == null)
             {
                 _characterData = new CharacterData();
+                SelectedJob = PotentialJobs[0];
             }
             else
             {
@@ -172,10 +173,14 @@ namespace Maple.ViewModels
                 string jsonString = File.ReadAllText(fullPath);
                 _characterData = JsonConvert.DeserializeObject<CharacterData>(jsonString);
             }
+            if (SkillDataList?.Any() ?? false)
+            {
+                SelectedSkillName = SkillDataList[0].SkillName;
+            }
             _parentWindow = window;
             IsActive = true;
             IsClosing = false;
-            SelectedJob = PotentialJobs[0];
+            
         }
     }
 }

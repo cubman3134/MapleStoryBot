@@ -388,7 +388,7 @@ namespace Maple.Data
             return false;
         }
 
-        public static List<Color> GetColorsFromBmp(Bitmap bmp)
+        private static List<Color> GetColorsFromBmp(Bitmap bmp)
         {
             List<Color> colorData = new List<Color>(new Color[bmp.Width * bmp.Height]);
             BitmapData bmData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
@@ -409,8 +409,8 @@ namespace Maple.Data
                 Vector2 pixelCoordinates = MapleMath.PixelToPixelCoordinate(curIndex, bmpWidth);
                 unsafe
                 {
-                    byte* p = (byte*)scan0.ToPointer() + pixelCoordinates.Y * stride;
-                    px = pixelCoordinates.X * pixWidth;
+                    byte* p = (byte*)scan0.ToPointer() + (int)pixelCoordinates.Y * stride;
+                    px = (int)pixelCoordinates.X * pixWidth;
                     alpha = (byte)(pixWidth == 4 ? p[px + 3] : 255);
                     color = Color.FromArgb(alpha, p[px + 2], p[px + 1], p[px + 0]);
                 }
