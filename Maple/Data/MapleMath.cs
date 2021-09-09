@@ -128,6 +128,10 @@ namespace Maple.Data
                         nearestNode = curNeighbor;
                     }
                 }
+                if (nearestNode == null)
+                {
+                    nearestNode = neighbors.OrderBy(x => MapleMath.PixelCoordinateDistance(x.Beginning, destinationNode.Beginning)).First(); // todo this isnt good
+                }
                 path.Add(nearestNode);
                 currentNode = nearestNode;
             }

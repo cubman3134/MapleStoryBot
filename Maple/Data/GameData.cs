@@ -71,6 +71,7 @@ namespace Maple.Data
 
         int NumMobsAtNextCluster;
         Vector2 NextMobClusterMinimapLocation;
+        bool ReadyForNewCluster;
         bool MobDirectionLeft;
         bool CloseMobsStillAlive;
         bool CharacterDirectionLeft;
@@ -82,7 +83,7 @@ namespace Maple.Data
             int numMobs;
             if (Imaging.GetMobLocation(CurrentMapData, out numMobs, out bestMinimapData))
             {
-                if (numMobs > NumMobsAtNextCluster)
+                if (numMobs > NumMobsAtNextCluster && ReadyForNewCluster)
                 {
                     NumMobsAtNextCluster = numMobs;
                     NextMobClusterMinimapLocation = bestMinimapData;
@@ -162,14 +163,7 @@ namespace Maple.Data
             }
         }
 
-        private List<MapPiece> GetMapPiecesWithinJumpableDistance(MapPiece mapPieceData)
-        {
-            //List<JumpTimestamp>
-            //CurrentCharacterData.JumpDataData.JumpTypeToJumpTimestamps
-            return null;
-        }
-
-        public void WalkBrain(MapPiece mapTarget, Vector2 vectorTarget)
+        /*public void WalkBrain(MapPiece mapTarget, Vector2 vectorTarget)
         {
             MapPiece currentMapPiece = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
             if (currentMapPiece != mapTarget)
@@ -219,13 +213,10 @@ namespace Maple.Data
                 }
             }
             
-        }
+        }*/
 
         public void GameBrain()
         {
-            _mobFinderThread = new Thread(NewMobFinderThreadWorker);
-            _minimapThread = new Thread(MinimapThreadWorker);
-            _minimapThread.Start();
             Vector2 nextMobCluster;
             if (!Imaging.GetCurrentGameScreen(out Bitmap curGameScreen))
             {
@@ -248,83 +239,154 @@ namespace Maple.Data
             fullPath = Path.Combine(fileLocation, MapNames.KerningTower2FCafe1.ToString());
             jsonString = File.ReadAllText(fullPath);
             CurrentMapData = JsonConvert.DeserializeObject<MapData>(jsonString);
+            ReadyForNewCluster = true;
+            _mobFinderThread = new Thread(NewMobFinderThreadWorker);
+            _mobFinderThread.Start();
+            _minimapThread = new Thread(MinimapThreadWorker);
+            _minimapThread.Start();
             CurrentMapData.SetupConjoiningMapPiecesBasedOnJumpData(CurrentCharacterData.JumpDataData);
             if (InGameStatus == InGameStatuses.Mobbing)
             {
                 
                 //_mobFinderThread.Start();
             }
+            while (NextMobClusterMinimapLocation == null)
+            {
+                Thread.Sleep(100);
+            }
             Random rand = new Random();
             while (InGameStatus == InGameStatuses.Mobbing)
             {
                 while (CloseMobsStillAlive)
                 {
-                    if (MobDirectionLeft && !CharacterDirectionLeft)
-                    {
+                    //if (MobDirectionLeft && !CharacterDirectionLeft)
+                    //{
 
-                    }
-                    else if (!MobDirectionLeft && CharacterDirectionLeft)
-                    {
+                    //}
+                    //else if (!MobDirectionLeft && CharacterDirectionLeft)
+                    //{
 
-                    }
+                    //}
                     CurrentCharacterData.TryToUseSkill();
                 }
                 //CurrentPlayerMinimapLocation = new Vector2(20, 93);
-                NextMobClusterMinimapLocation = new Vector2(140, 120); // test todo
+                //NextMobClusterMinimapLocation = new Vector2(15, 93); // test todo
+                ReadyForNewCluster = false;
+                NumMobsAtNextCluster = 0;
                 nextMobCluster = NextMobClusterMinimapLocation;
                 MapPiece targetMapPiece = CurrentMapData.GetCurrentMapPiece(nextMobCluster);
                 MapPiece currentMapPiece = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
-                List<MapPiece> mapPieceDataList = MapleMath.FindRoute(CurrentMapData, currentMapPiece, targetMapPiece);
-                Console.WriteLine("starting!!");
-                for (int curMapPieceIterator = 0; curMapPieceIterator < mapPieceDataList.Count; curMapPieceIterator++)
+                while (CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation).Beginning.X != targetMapPiece.Beginning.X && currentMapPiece.Beginning.Y != targetMapPiece.Beginning.Y)
                 {
-                    if (curMapPieceIterator == mapPieceDataList.Count - 1)
+                    List<MapPiece> mapPieceDataList = MapleMath.FindRoute(CurrentMapData, currentMapPiece, targetMapPiece);
+                    Console.WriteLine("starting!!");
+                    double curY = 0;
+                    for (int curMapPieceIterator = 0; curMapPieceIterator < mapPieceDataList.Count; curMapPieceIterator++)
                     {
-                        // todo
-                        break;
-                    }
-                    var curMapPieceLink = mapPieceDataList[curMapPieceIterator].MapPieceLinkDataList.Where(x => x.JoiningMapPiece.Beginning.X == mapPieceDataList[curMapPieceIterator + 1].Beginning.X
-                        && x.JoiningMapPiece.Beginning.Y == mapPieceDataList[curMapPieceIterator + 1].Beginning.Y).First();
-                    int randJumpSelection = rand.Next(0, curMapPieceLink.JoiningJumpDataList.Count);
-                    JoiningJumpDataPoint joiningJumpData = curMapPieceLink.JoiningJumpDataList[randJumpSelection];
-                    if (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
-                        while (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
+                        while (curY != CurrentPlayerMinimapLocation.Y)
                         {
-                            Thread.Sleep(50);
+                            curY = CurrentPlayerMinimapLocation.Y;
+                            Thread.Sleep(250);
                         }
-                        Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
-                    }
-                    else if (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
-                        while (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
+
+                        if (curMapPieceIterator == mapPieceDataList.Count - 1)
                         {
-                            Thread.Sleep(50);
+                            // todo
+                            if (mapPieceDataList[curMapPieceIterator].MapPieceType == MapPieceTypes.Rope)
+                            {
+                                Input.StopInput(Input.SpecialCharacters.KEY_UP_ARROW);
+                            }
+                            if (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
+                            {
+                                Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                                while (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
+                                {
+                                    Thread.Sleep(50);
+                                }
+                                Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                            }
+                            else if (CurrentPlayerMinimapLocation.X > nextMobCluster.X)
+                            {
+                                Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                                while (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
+                                {
+                                    Thread.Sleep(50);
+                                }
+                                Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                            }
+                            continue;
                         }
-                        Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        var curMapPieceLink = mapPieceDataList[curMapPieceIterator].MapPieceLinkDataList.Where(x => x.JoiningMapPiece.Beginning.X == mapPieceDataList[curMapPieceIterator + 1].Beginning.X
+                            && x.JoiningMapPiece.Beginning.Y == mapPieceDataList[curMapPieceIterator + 1].Beginning.Y).First();
+
+                        //var jumpDataList = curMapPieceLink.JoiningJumpDataList.Where(x => x.LandLocation.X > (mapPieceDataList[curMapPieceIterator + 1].Beginning.X) && x.JumpLocation.X > (mapPieceDataList[curMapPieceIterator].Beginning.X)
+                        //    && x.LandLocation.X < (mapPieceDataList[curMapPieceIterator + 1].End.X) && x.JumpLocation.X < (mapPieceDataList[curMapPieceIterator].End.X)).ToList();
+                        int randJumpSelection = rand.Next(0, curMapPieceLink.JoiningJumpDataList.Count);
+                        JoiningJumpDataPoint joiningJumpData = curMapPieceLink.JoiningJumpDataList[randJumpSelection];
+                        if (mapPieceDataList[curMapPieceIterator].MapPieceType == MapPieceTypes.Rope)
+                        {
+                            while (CurrentPlayerMinimapLocation.Y < mapPieceDataList[curMapPieceIterator].End.Y)
+                            {
+                                Thread.Sleep(10);
+                            }
+                            Input.StopInput(Input.SpecialCharacters.KEY_UP_ARROW);
+                        }
+                        else if (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                            while (CurrentPlayerMinimapLocation.X < joiningJumpData.JumpLocation.X)
+                            {
+                                Thread.Sleep(50);
+                            }
+                            Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        }
+                        else if (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                            while (CurrentPlayerMinimapLocation.X > joiningJumpData.JumpLocation.X)
+                            {
+                                Thread.Sleep(50);
+                            }
+                            Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        }
+                        if (joiningJumpData.TurnedLeft)
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        }
+                        else
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        }
+                        Thread.Sleep(10);
+                        JumpData.TryToJump(joiningJumpData.JumpType, joiningJumpData.MillisecondDelays);
+                        Thread.Sleep(10);
+                        if (curMapPieceIterator + 1 < mapPieceDataList.Count() && mapPieceDataList[curMapPieceIterator + 1].MapPieceType == MapPieceTypes.Rope)
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_UP_ARROW);
+                        }
+                        else if (joiningJumpData.TurnedLeft)
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        }
+                        else
+                        {
+                            Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        }
+                        Thread.Sleep(10);
+                        if (joiningJumpData.TurnedLeft)
+                        {
+                            Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                        }
+                        else
+                        {
+                            Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        }
                     }
-                    if (joiningJumpData.TurnedLeft)
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
-                    }
-                    else
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
-                    }
-                    Thread.Sleep(10);
-                    JumpData.TryToJump(joiningJumpData.JumpType, joiningJumpData.MillisecondDelays);
-                    Thread.Sleep(10);
-                    if (joiningJumpData.TurnedLeft)
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
-                    }
-                    else
-                    {
-                        Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
-                    }
+                    Console.WriteLine("done!!");
                 }
+                CloseMobsStillAlive = true;
+                ReadyForNewCluster = true;
+                
             }
             _mobFinderThread.Join();
             
