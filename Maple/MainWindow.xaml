@@ -21,6 +21,7 @@
             <Button Content="Alter Maps" Command="{Binding CreateNewMapCommand}" />
             <Button Content="Alter Jobs" Command="{Binding AlterJobsCommand}" />
             <Button Content="Queue Tasks" Command="{Binding QueueTasksCommand}" />
+            <Button Content="Start Game" Command="{Binding GamePlayerCommand}" />
             <Button Content="Check Statistics" />
         </UniformGrid>
     </Grid>

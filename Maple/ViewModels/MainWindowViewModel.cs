@@ -46,6 +46,23 @@ namespace Maple.ViewModels
             IsActive = true;
         }
 
+        private ICommand _gamePlayerCommand;
+        public ICommand GamePlayerCommand
+        {
+            get
+            {
+                return _gamePlayerCommand ?? (_gamePlayerCommand = new CommandHandler(() => GamePlayer(), () => true));
+            }
+        }
+
+        public void GamePlayer()
+        {
+            Windows.GamePlayer gamePlayerWindow = new Windows.GamePlayer();
+            IsActive = false;
+            gamePlayerWindow.ShowDialog();
+            IsActive = true;
+        }
+
         public MainWindowViewModel()
         {
             IsActive = true;

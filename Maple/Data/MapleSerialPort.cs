@@ -19,7 +19,7 @@ namespace Maple.Data
             ArduinoPortData.Open();
             _portName = portName;
             //ArduinoPortData.DataReceived += ArduinoDataReceived;
-            ReadThread = new Thread(Read);
+            ReadThread = new Thread(Read) { Name = "Maple Serial Port REad Thread" };
             ReadThread.Start();
         }
 

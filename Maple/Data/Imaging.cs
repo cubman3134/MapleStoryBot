@@ -16,7 +16,9 @@ using System.Windows.Media.Imaging;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
+using System.Diagnostics;
 using IronOcr;
+
 
 namespace Maple.Data
 {
@@ -151,7 +153,7 @@ namespace Maple.Data
         {
             _millisecondRefreshRate = millisecondRefreshRate;
             _photoWithTimestampDataList = new List<PhotoWithTimestamp>();
-            _photoTakerThread = new Thread(PhotoTakerWorker);
+            _photoTakerThread = new Thread(PhotoTakerWorker) { Name = "Photo Taker Thread" };
             _photoTakerThread.Start();
         }
 
@@ -198,6 +200,8 @@ namespace Maple.Data
 
         public enum ImageFiles
         {
+            badguy1,
+            map1,
             BlueEspressoMachineLeft,
             BlueEspressoMachineRight,
             BlueRaspberryJellyJuiceLeft,
@@ -214,7 +218,9 @@ namespace Maple.Data
             Rune,
             RuneMiniMap,
             HP,
+            TheNextLegendTitle,
             LeftHealthBar,
+            HealthBarEmpty,
             runetest5,
             runetest4,
             runetest3,
@@ -248,18 +254,6 @@ namespace Maple.Data
             string path = $"..\\..\\Images\\{fileName.ToString()}.png";
             path = Path.Combine(Environment.CurrentDirectory, path);
             return new Bitmap(path);
-        }
-
-        private static bool WithinTolerance(Color colorA, Color colorB, int tol)
-        {
-
-            if (Math.Abs(colorA.R - colorB.R) < tol
-                && Math.Abs(colorA.B - colorB.B) < tol
-                && Math.Abs(colorA.R - colorB.R) < tol)
-            {
-                return true;
-            }
-            return false;
         }
 
         private enum ClosestSide
@@ -318,17 +312,17 @@ namespace Maple.Data
                 List<Color> curColorData = GetColorsFromBmp(croppedImage);
                 int croppedImageWidth = croppedImage.Width;
                 int croppedImageHeight = croppedImage.Height;
-                Parallel.ForEach(Enumerable.Range(0, croppedImageWidth * croppedImageHeight), curColorIndex => 
+                /*Parallel.ForEach(Enumerable.Range(0, croppedImageWidth * croppedImageHeight), curColorIndex => 
                 { 
                     foreach (var curRuneColor in RuneColors)
                     {
                         if (WithinTolerance(curColorData[curColorIndex], curRuneColor, 5))
                         {
-                            pixelClusters[curRuneColor].AddHit(MapleMath.PixelToPixelCoordinate(curColorIndex, croppedImageWidth));
+                            pixelClusters[curRuneColor].AddHit(curColorIndex);
                             break;
                         }
                     }
-                });
+                });*/
                 /*Dictionary<Color, ClosestSide> colorSuggestions = new Dictionary<Color, ClosestSide>();
                 foreach (var curColor in RuneColors)
                 {
@@ -356,7 +350,7 @@ namespace Maple.Data
             return false;
         }
 
-        public static bool GetMobLocation(MapData mapData, out int numMobs, out Vector2 bestMinimapLocation)
+        public static bool GetMobLocation(MapData mapData, out int numMobs, Vector2 playerMinimapLocation, out Vector2 bestMinimapLocation)
         {
             List<MobNames> currentMobNames = MapData.MapNamesToMobNames[mapData.MapName];
             List<Imaging.ImageFiles> currentMobImageFileNames = new List<Imaging.ImageFiles>();
@@ -369,26 +363,35 @@ namespace Maple.Data
             {
                 currentMobImages.Add(Imaging.GetImageFromFile(curMobImageFileName));
             }
+            Bitmap playerTitleImage = Imaging.GetImageFromFile(ImageFiles.TheNextLegendTitle); // todo
+            double titleToPlayerOffsetX = 70; 
+            double titleToPlayerOffsetY = -50;
             Bitmap curScreen;
-            List<int> mobLocations;
+            List<Vector2> mobLocations;
             while (!Imaging.GetCurrentGameScreen(out curScreen))
             {
                 Thread.Sleep(10);
             }
-            if (Imaging.FindBitmap(currentMobImages, curScreen, 20, out mobLocations))
+            // todo uhh this could pose a problem actually if multiple players
+            if (playerMinimapLocation != null && Imaging.FindBitmap(new List<Bitmap>() { playerTitleImage }, curScreen, out List<Vector2> titleLocations, ImageFindTypes.Traditional) && Imaging.FindBitmap(currentMobImages, curScreen, out mobLocations, ImageFindTypes.SimilarImage) && titleLocations.Count == 1)
             {
                 List<MobCluster> mobClusterData = MobCluster.FindMobClustersFromPixelData(mobLocations, curScreen.Width, curScreen.Height);
                 MobCluster curMobCluster = mobClusterData.OrderByDescending(x => x.Locations.Count()).Take(1).First();
-                bestMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curMobCluster.Center);
+                var playerScreenLocation = titleLocations[0];
+                bestMinimapLocation = MapleMath.MapCoordinatesToMiniMapCoordinates(curMobCluster.Center, new Vector2(playerScreenLocation.X + titleToPlayerOffsetX, playerScreenLocation.Y + titleToPlayerOffsetY), playerMinimapLocation);
                 numMobs = mobLocations.Count;
                 return true;
+            }
+            if (playerMinimapLocation != null)
+            {
+
             }
             bestMinimapLocation = null;
             numMobs = 0;
             return false;
         }
 
-        private static List<Color> GetColorsFromBmp(Bitmap bmp)
+        public static List<Color> GetColorsFromBmp(Bitmap bmp)
         {
             List<Color> colorData = new List<Color>(new Color[bmp.Width * bmp.Height]);
             BitmapData bmData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
@@ -401,12 +404,16 @@ namespace Maple.Data
             int stride = bmData.Stride;
             int bmpWidth = bmp.Width;
             int bmpHeight = bmp.Height;
+            Vector2 PixelToPixelCoordinate(int pixelLocation, int imageWidth)
+            {
+                return new Vector2(pixelLocation % imageWidth, pixelLocation / imageWidth);
+            }
             Parallel.ForEach(Enumerable.Range(0, bmpWidth * bmpHeight), curIndex =>
             {
                 int px;
                 byte alpha;
                 Color color;
-                Vector2 pixelCoordinates = MapleMath.PixelToPixelCoordinate(curIndex, bmpWidth);
+                Vector2 pixelCoordinates = PixelToPixelCoordinate(curIndex, bmpWidth);
                 unsafe
                 {
                     byte* p = (byte*)scan0.ToPointer() + (int)pixelCoordinates.Y * stride;
@@ -437,105 +444,192 @@ namespace Maple.Data
             return true;
         }
 
-        public static bool FindBitmap(List<Bitmap> smallBmps, Bitmap bigBmp, int tol, out List<int> locations)
+        public class ImageHit
         {
-            IEnumerable<int> potentialSelections
-                = Enumerable.Range(0, bigBmp.Width * bigBmp.Height);
-            //List<Color> bigBitmapColors = new List<Color>();
-            List<List<Color>> smallBitmapColors = new List<List<Color>>();
-            //BitmapData bmpData =  bigBmp.LockBits(new Rectangle(0, 0, bigBmp.Width, bigBmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
-            var time1 = DateTime.Now;
-            List<Color> bigBitmapColors = GetColorsFromBmp(bigBmp);
-            var time2 = DateTime.Now;
-            /*foreach (var cur in Enumerable.Range(0, bigBmp.Width * bigBmp.Height))
+            public int SubImageIdentifyingIndex;
+            public List<Vector2> SubImageLocation;
+            public ImageHit(int subImageIdentifyingIndex, List<Vector2> subImageLocation)
             {
-                bigBitmapColors.Add(bigBmp.GetPixel(cur % bigBmp.Width, cur / bigBmp.Width));
-            }*/
-            var time3 = DateTime.Now;
-            var timeToComplete1 = time2 - time1;
-            var timeToComplete2 = time3 - time2;
-            List<int> smallBmpWidths = new List<int>();
-            List<int> smallBmpHeights = new List<int>();
-            List<int> curSmallPixels = new List<int>();
-            foreach (var curSmallBmp in smallBmps)
-            {
-                /*smallBitmapColors.Add(new List<Color>());
-                foreach (var cur in Enumerable.Range(0, curSmallBmp.Width * curSmallBmp.Height))
-                {
-                    
-                    smallBitmapColors[smallBitmapColors.Count - 1].Add(curSmallBmp.GetPixel(cur % curSmallBmp.Width, cur / curSmallBmp.Width));
-                }*/
-                smallBitmapColors.Add(GetColorsFromBmp(curSmallBmp));
-                smallBmpWidths.Add(curSmallBmp.Width);
-                smallBmpHeights.Add(curSmallBmp.Height);
-                curSmallPixels.Add(0);
+                SubImageIdentifyingIndex = subImageIdentifyingIndex;
+                SubImageLocation = subImageLocation;
             }
+        }
 
-            int bigBmpWidth = bigBmp.Width;
-            ConcurrentBag<int> curPotentialSelections;
-
-            locations = new List<int>();
-            var returnLocations = new List<int>();
-            bool done = false;
-            while (potentialSelections.Count() > 0)
+        public class SubImage
+        {
+            public int SubImageIdentifyingIndex;
+            public List<Color> Pixels;
+            public SubImage(List<Color> pixels, int subImageIdentifyingIndex)
             {
+                SubImageIdentifyingIndex = subImageIdentifyingIndex;
+                Pixels = pixels;
+            }
+        }
 
-                curPotentialSelections = new ConcurrentBag<int>();
-                Parallel.ForEach(potentialSelections, curPixel =>
-                //foreach (var curPixel in potentialSelections)
+        public class ImageProcessingPixelData
+        {
+            public static ConcurrentDictionary<Color, ImageProcessingPixelData> PreProcessedColors;
+            public Color CurrentColor;
+            public List<ImageHit> ImageHitDataList;
+
+
+            public ImageProcessingPixelData(Color currentColor, List<ImageHit> imageHitDataList)
+            {
+                CurrentColor = currentColor;
+                ImageHitDataList = imageHitDataList;
+            }
+        }
+
+        /*public static void FindMatch(Mat modelImage, Mat observedImage, out long matchTime, out VectorOfKeyPoint modelKeyPoints, out VectorOfKeyPoint observedKeyPoints, VectorOfVectorOfDMatch matches, out Mat mask, out Mat homography)
+        {
+            int k = 2;
+            double uniquenessThreshold = 0.8;
+            double hessianThresh = 300;
+
+            Stopwatch watch;
+            homography = null;
+
+            modelKeyPoints = new VectorOfKeyPoint();
+            observedKeyPoints = new VectorOfKeyPoint();
+                using (UMat uModelImage = modelImage.ToUMat(AccessType.Read))
+                using (UMat uObservedImage = observedImage.ToUMat(AccessType.Read))
                 {
-                    for (int curSmallBmpIterator = 0; curSmallBmpIterator < smallBitmapColors.Count; curSmallBmpIterator++)
+                    SURF surfCPU = new SURF(hessianThresh);
+                    //extract features from the object image
+                    UMat modelDescriptors = new UMat();
+                    surfCPU.DetectAndCompute(uModelImage, null, modelKeyPoints, modelDescriptors, false);
+
+                    watch = Stopwatch.StartNew();
+
+                    // extract features from the observed image
+                    UMat observedDescriptors = new UMat();
+                    surfCPU.DetectAndCompute(uObservedImage, null, observedKeyPoints, observedDescriptors, false);
+                    BFMatcher matcher = new BFMatcher(DistanceType.L2);
+                    matcher.Add(modelDescriptors);
+
+                    matcher.KnnMatch(observedDescriptors, matches, k, null);
+                    mask = new Mat(matches.Size, 1, DepthType.Cv8U, 1);
+                    mask.SetTo(new MCvScalar(255));
+                    Features2DToolbox.VoteForUniqueness(matches, uniquenessThreshold, mask);
+
+                    int nonZeroCount = CvInvoke.CountNonZero(mask);
+                    if (nonZeroCount >= 4)
                     {
-                        var curSmallPixel = curSmallPixels[curSmallBmpIterator];
-                        var smallBmpWidth = smallBmpWidths[curSmallBmpIterator];
-                        var smallBmpHeight = smallBmpHeights[curSmallBmpIterator];
-                        int curBigPixelX = curPixel % bigBmpWidth;
-                        int curBigPixelY = curPixel / bigBmpWidth;
-                        int curSmallPixelX = curSmallPixel % smallBmpWidth;
-                        int curSmallPixelY = curSmallPixel / smallBmpWidth;
-                        if (curPixel < bigBitmapColors.Count() 
-                            && curSmallPixel < smallBitmapColors[curSmallBmpIterator].Count())
-                        {
-                            if (WithinTolerance(smallBitmapColors[curSmallBmpIterator][curSmallPixel], bigBitmapColors[curPixel], tol))
-                            {
-                                if (curSmallPixel == smallBitmapColors[curSmallBmpIterator].Count() - 1)
-                                {
-                                    done = true;
-                                    returnLocations = potentialSelections.Select(x => { return x - (bigBmpWidth * smallBmpHeight); }).ToList();
-                                    return;
-                                }
-                                if (curSmallPixelX == smallBmpWidth - 1)
-                                {
-                                    curPotentialSelections.Add(curPixel + (bigBmpWidth - smallBmpWidth + 1));
-                                    return;
-                                }
-                                else
-                                {
-                                    curPotentialSelections.Add(curPixel + 1);
-                                    return;
-                                }
-                            }
-                        }
+                        nonZeroCount = Features2DToolbox.VoteForSizeAndOrientation(modelKeyPoints, observedKeyPoints,
+                           matches, mask, 1.5, 20);
+                        if (nonZeroCount >= 4)
+                            homography = Features2DToolbox.GetHomographyMatrixFromMatchedFeatures(modelKeyPoints,
+                               observedKeyPoints, matches, mask, 2);
                     }
 
-
-                });
-                if (done)
-                {
-                    locations = returnLocations;
-                    return true;
+                    watch.Stop();
                 }
-                potentialSelections = curPotentialSelections;
-                for (int curSmallBmpIterator = 0; curSmallBmpIterator < smallBitmapColors.Count; curSmallBmpIterator++)
+            matchTime = watch.ElapsedMilliseconds;
+        }
+
+        public static bool ProcessImage(Bitmap imgSrc, Bitmap imgSub, double threshold = 400)
+        {
+            Image<Gray, Byte> modelImage = new Image<Gray, byte>("HatersGonnaHate.png");
+            Image<Gray, Byte> observedImage = new Image<Gray, byte>("box_in_scene.png");
+            Stopwatch watch;
+            Emgu.CV.Features2D.s
+            HomographyMatrix homography = null;
+            SURFDetector surfCPU = new SURFDetector(500, false);
+
+            VectorOfKeyPoint modelKeyPoints;
+            VectorOfKeyPoint observedKeyPoints;
+            Matrix<int> indices;
+            Matrix<float> dist;
+            Matrix<byte> mask;
+                //extract features from the object image
+                modelKeyPoints = surfCPU.DetectKeyPointsRaw(modelImage, null);
+                //MKeyPoint[] kpts = modelKeyPoints.ToArray();
+                Matrix<float> modelDescriptors = surfCPU.ComputeDescriptorsRaw(modelImage, null, modelKeyPoints);
+
+                watch = Stopwatch.StartNew();
+
+                // extract features from the observed image
+                observedKeyPoints = surfCPU.DetectKeyPointsRaw(observedImage, null);
+                Matrix<float> observedDescriptors = surfCPU.ComputeDescriptorsRaw(observedImage, null, observedKeyPoints);
+
+                BruteForceMatcher matcher = new BruteForceMatcher(BruteForceMatcher.DistanceType.L2F32);
+                matcher.Add(modelDescriptors);
+                int k = 2;
+                indices = new Matrix<int>(observedDescriptors.Rows, k);
+                dist = new Matrix<float>(observedDescriptors.Rows, k);
+                matcher.KnnMatch(observedDescriptors, indices, dist, k, null);
+
+                mask = new Matrix<byte>(dist.Rows, 1);
+
+                mask.SetValue(255);
+
+                Features2DTracker.VoteForUniqueness(dist, 0.8, mask);
+
+                int nonZeroCount = CvInvoke.cvCountNonZero(mask);
+                if (nonZeroCount >= 4)
                 {
-                    curSmallPixels[curSmallBmpIterator]++;
+                    nonZeroCount = Features2DTracker.VoteForSizeAndOrientation(modelKeyPoints, observedKeyPoints, indices, mask, 1.5, 20);
+                    if (nonZeroCount >= 4)
+                        homography = Features2DTracker.GetHomographyMatrixFromMatchedFeatures(modelKeyPoints, observedKeyPoints, indices, mask, 3);
                 }
 
+                watch.Stop();
+
+            //Draw the matched keypoints
+            Image<Bgr, Byte> result = Features2DTracker.DrawMatches(modelImage, modelKeyPoints, observedImage, observedKeyPoints,
+                indices, new Bgr(255, 255, 255), new Bgr(255, 255, 255), mask, Features2DTracker.KeypointDrawType.NOT_DRAW_SINGLE_POINTS);
+
+            #region draw the projected region on the image
+            if (homography != null)
+            {  //draw a rectangle along the projected model
+                Rectangle rect = modelImage.ROI;
+                PointF[] pts = new PointF[] {
+               new PointF(rect.Left, rect.Bottom),
+               new PointF(rect.Right, rect.Bottom),
+               new PointF(rect.Right, rect.Top),
+               new PointF(rect.Left, rect.Top)};
+                homography.ProjectPoints(pts);
+
+                result.DrawPolyline(Array.ConvertAll<PointF, Point>(pts, Point.Round), true, new Bgr(Color.Red), 5);
             }
-            if (potentialSelections.Count() == 0)
+            #endregion
+
+            ImageViewer.Show(result, String.Format("Matched using {0} in {1} milliseconds", GpuInvoke.HasCuda ? "GPU" : "CPU", watch.ElapsedMilliseconds));
+        }
+
+
+    }
+
+    List<ImageProcessingPixelData> bigImageColors = GetColorsFromBmp(bigBmp).Select(x => { return new ImageProcessingPixelData(x, new List<ImageHit>()); }).ToList();
+    List<SubImage> subImageDataList = new List<SubImage>();
+    for (int i = 0; i < smallBmps.Count; i++)
+    {
+        subImageDataList.Add(new SubImage(GetColorsFromBmp(smallBmps[i]), i));
+    }
+    var uniqueBigColors = bigImageColors.GroupBy(x => x.CurrentColor).First();
+    Parallel.ForEach(uniqueBigColors, currentBigImageColor => wwwww
+    {
+        foreach (var curSubImage in subImageDataList)
+        {
+            foreach (var curSubImageColor in curSubImage.Pixels)
+            {
+                if (WithinTolerance(currentBigImageColor.CurrentColor, curSubImageColor, tol))
+                {
+
+                }
+            }
+        }
+    });
+}*/
+
+        public static bool FindBitmap(List<Bitmap> subImageDataList, Bitmap sourceImage, out List<Vector2> locations, ImageFindTypes imageFindType = ImageFindTypes.ExactImage)
+        {
+            if (!ImageFinder.FindImage(imageFindType, sourceImage, subImageDataList, out locations))
             {
                 return false;
             }
+            // correct height, basically reverse the Y
+            locations = locations.Select(x => { return new Vector2(x.X, Math.Abs(x.Y - sourceImage.Height)); }).ToList();
             return true;
         }
 

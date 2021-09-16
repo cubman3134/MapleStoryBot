@@ -98,12 +98,13 @@ namespace Maple.Windows
                 var cursorPosition = System.Windows.Forms.Cursor.Position;
                 // Draw the text onto the image
                 //g.DrawString($"x: {xVal} y: {yVal}\n x: {cursorPosition.X} y: {cursorPosition.Y}", new Font("Arial", 18), Brushes.Red, new RectangleF(0, 0, croppedImage.Width, croppedImage.Height), format);
-                if (Maple.Data.Imaging.FindBitmap(playerImages, croppedImage, 10, out List<int> locations))
+                if (Maple.Data.Imaging.FindBitmap(playerImages, croppedImage, out List<Vector2> locations))
                 {
+                    Bitmap title = Imaging.GetImageFromFile(Imaging.ImageFiles.TheNextLegendTitle);
                     if (locations?.Count > 0)
                     {
-                        var curLocation = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(locations[0], croppedImage.Width), croppedImage.Height);
-                        g.DrawString($"x: {curLocation.X} y: {curLocation.Y}", new Font("Arial", 18), Brushes.Red, new Rectangle(0, 0, croppedImage.Width, croppedImage.Height), format);
+                        var curLocation = locations[0];
+                        g.DrawString($"minimap x: {curLocation.X} y: {curLocation.Y}", new Font("Arial", 18), Brushes.Red, new Rectangle(0, 0, croppedImage.Width, croppedImage.Height), format);
                         this.Dispatcher.Invoke(() =>
                         {
                             ModelData.CurrentPosition = curLocation;
@@ -133,7 +134,7 @@ namespace Maple.Windows
         {
             InitializeComponent();
             DataContext = new ViewModels.MapCreatorViewModel();
-            CameraUpdateThread = new Thread(CameraUpdate);
+            CameraUpdateThread = new Thread(CameraUpdate) { Name = "Map Creator Camera Update Thread" };
             CameraUpdateThread.Start();
         }
     }

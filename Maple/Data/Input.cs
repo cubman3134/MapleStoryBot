@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO.Ports;
@@ -54,8 +55,31 @@ namespace Maple.Data
         public static MapleSerialPort KeyboardArduinoData;
         public static MapleSerialPort MouseArduinoData;
 
+        public static ConcurrentDictionary<char, DateTime> ActiveCharInput = new ConcurrentDictionary<char, DateTime>();
+        public static ConcurrentDictionary<SpecialCharacters, DateTime> ActiveSpecialCharInput = new ConcurrentDictionary<SpecialCharacters, DateTime>();
+        public static bool NewInputEnabled;
+
+        public static void StopAllKeyboardInput()
+        {
+            List<char> charsToRemove = ActiveCharInput.Keys.ToList();
+            List<SpecialCharacters> specialCharsToRemove = ActiveSpecialCharInput.Keys.ToList();
+            foreach (var curChar in charsToRemove)
+            {
+                StopInput(curChar);
+            }
+            foreach (var curSpecialChar in specialCharsToRemove)
+            {
+                StopInput(curSpecialChar);
+            }
+        }
+
         public static void StartInput(char c)
         {
+            if (!NewInputEnabled)
+            {
+                return;
+            }
+            ActiveCharInput[c] = DateTime.Now;
             int asciiVal = (int)c;
             string asciiValString = asciiVal.ToString().PadLeft(3, '0');
             MasterArduinoData.SendData($"KEYDOWN{asciiValString}");
@@ -63,6 +87,11 @@ namespace Maple.Data
 
         public static void StartInput(SpecialCharacters specialCharacter)
         {
+            if (!NewInputEnabled)
+            {
+                return;
+            }
+            ActiveSpecialCharInput[specialCharacter] = DateTime.Now;
             int asciiVal = (int)specialCharacter;
             string asciiValString = asciiVal.ToString().PadLeft(3, '0');
             MasterArduinoData.SendData($"KEYDOWN{asciiValString}");
@@ -70,6 +99,10 @@ namespace Maple.Data
 
         public static void StopInput(char c)
         {
+            if (!ActiveCharInput.TryRemove(c, out DateTime inputDateTime))
+            {
+                return;
+            }
             int asciiVal = (int)c;
             string asciiValString = asciiVal.ToString().PadLeft(3, '0');
             MasterArduinoData.SendData($"KEYLIFT{asciiValString}");
@@ -77,6 +110,10 @@ namespace Maple.Data
 
         public static void StopInput(SpecialCharacters specialCharacter)
         {
+            if (!ActiveSpecialCharInput.TryRemove(specialCharacter, out DateTime inputDateTime))
+            {
+                return;
+            }
             int asciiVal = (int)specialCharacter;
             string asciiValString = asciiVal.ToString().PadLeft(3, '0');
             MasterArduinoData.SendData($"KEYLIFT{asciiValString}");

@@ -252,11 +252,11 @@ namespace Maple.Data
             foreach (var curPhoto in photosWithTimestampDataList)
             {
                 var curMinimap = Imaging.CropImage(curPhoto.Photo, Imaging.MiniMapRect);
-                if (!Imaging.FindBitmap(new List<System.Drawing.Bitmap>() { playerImage }, curMinimap, 20, out List<int> locations))
+                if (!Imaging.FindBitmap(new List<System.Drawing.Bitmap>() { playerImage }, curMinimap, out List<Vector2> locations))
                 {
                     continue;
                 }
-                Vector2 cur = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(locations[0], curMinimap.Width), curMinimap.Height);
+                Vector2 cur = locations[0];
                 switch (status)
                 {
                     case GenerateEquationCoefficientsStatuses.Unstarted:

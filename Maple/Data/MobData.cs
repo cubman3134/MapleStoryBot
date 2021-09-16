@@ -32,12 +32,12 @@ namespace Maple.Data
 
         public static double MaxVerticalClusterDistance = 100.0;
         public static double MaxHorizontalClusterDistance = 300.0;
-        public static List<MobCluster> FindMobClustersFromPixelData(List<int> mobLocations, int imageWidth, int imageHeight)
+        public static List<MobCluster> FindMobClustersFromPixelData(List<Vector2> mobLocations, int imageWidth, int imageHeight)
         {
             List<MobCluster> mobClusters = new List<MobCluster>();
             foreach (var curMobLocation in mobLocations)
             {
-                var curCoordinate = MapleMath.CorrectImageHeight(MapleMath.PixelToPixelCoordinate(curMobLocation, imageWidth), imageHeight);
+                var curCoordinate = curMobLocation;
                 bool added = false;
                 foreach (var curMobCluster in mobClusters)
                 {

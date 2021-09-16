@@ -80,12 +80,16 @@ namespace Maple.Data
         public Vector2 Beginning { get; set; }
         public Vector2 End { get; set; }
 
+        public Vector2 Center { get { return new Vector2(Beginning.X + (End.X - Beginning.X / 2), Beginning.Y); } }
+
         public bool Visited;
 
         public List<MapPieceLink> MapPieceLinkDataList;
 
         public static Vector2 CurrentMinimapLocation { get; set; }
         public static Vector2 CurrentPixelLocation { get; set; }
+
+        
 
         public MapPiece()
         {
@@ -323,7 +327,15 @@ namespace Maple.Data
         {
             double bestYDistance = 0;
             MapPiece bestMapPiece = null;
-            foreach (var curMapPiece in MapPieceDataList)
+            foreach (var curMapPiece in MapPieceDataList.Where(x => x.MapPieceType == MapPieceTypes.Rope))
+            {
+                // end y greater than bc at the top you're on a new platform
+                if (curMapPiece.Beginning.X == objectLocation.X && curMapPiece.Beginning.Y <= objectLocation.Y && curMapPiece.End.Y > objectLocation.Y)
+                {
+                    return curMapPiece;
+                }
+            }
+            foreach (var curMapPiece in MapPieceDataList.Where(x => x.MapPieceType == MapPieceTypes.Ledge))
             {
                 if (!curMapPiece.GetYValueAtXValue(objectLocation.X, out double yValue))
                 {

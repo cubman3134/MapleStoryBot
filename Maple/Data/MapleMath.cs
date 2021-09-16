@@ -139,15 +139,10 @@ namespace Maple.Data
             return (path);
         }
 
-        public static Vector2 PixelToPixelCoordinate(int pixelLocation, int imageWidth)
-        {
-            return new Vector2(pixelLocation % imageWidth, pixelLocation / imageWidth);
-        }
-
-        public static Vector2 CorrectImageHeight(Vector2 pixelCoordinate, int imageHeight)
+        /*public static Vector2 CorrectImageHeight(Vector2 pixelCoordinate, int imageHeight)
         {
             return new Vector2(pixelCoordinate.X, Math.Abs(pixelCoordinate.Y - imageHeight));
-        }
+        }*/
 
         public static int PixelCoordinateToPixel(Vector2 pixelLocation, int imageWidth)
         {
@@ -159,9 +154,11 @@ namespace Maple.Data
             return Math.Sqrt(Math.Pow(pixelCoordinate2.X - pixelCoordinate1.X, 2) + Math.Pow(pixelCoordinate2.Y - pixelCoordinate1.Y, 2));
         }
 
-        public static Vector2 MapCoordinatesToMiniMapCoordinates(Vector2 mapCoordinates)
+        public static Vector2 MapCoordinatesToMiniMapCoordinates(Vector2 mapCoordinates, Vector2 playerScreenLocation, Vector2 playerMinimapLocation)
         {
-            return new Vector2((int)(mapCoordinates.X * MapData.MinimapToPixelRatio), (int)(mapCoordinates.Y * MapData.MinimapToPixelRatio));
+            double mapCoordinatesChangeX = (mapCoordinates.X - playerScreenLocation.X) * MapData.MinimapToPixelRatio;
+            double mapCoordinatesChangeY = (mapCoordinates.Y - playerScreenLocation.Y) * MapData.MinimapToPixelRatio;
+            return new Vector2((int)(playerMinimapLocation.X + mapCoordinatesChangeX), (int)(playerMinimapLocation.Y + mapCoordinatesChangeY));
         }
 
         public static bool LocationWithinBounds(Vector2 locationToCheck, Vector2 minLocation, Vector2 maxLocation)
@@ -172,12 +169,12 @@ namespace Maple.Data
 
         public static Vector2 GetAverage(List<Vector2> coordinateDataList)
         {
-            int totalX = 0;
-            int totalY = 0;
+            double totalX = 0;
+            double totalY = 0;
             foreach (var curCoordinate in coordinateDataList)
             {
-                totalX += (int)curCoordinate.X;
-                totalY += (int)curCoordinate.Y;
+                totalX += curCoordinate.X;
+                totalY += curCoordinate.Y;
             }
             return new Vector2(totalX / coordinateDataList.Count, totalY / coordinateDataList.Count);
         }
