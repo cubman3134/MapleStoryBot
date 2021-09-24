@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Maple.Data
 {
-    class Input
+    public class Input
     {
         public enum SpecialCharacters
         {

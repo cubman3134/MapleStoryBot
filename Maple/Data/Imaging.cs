@@ -202,6 +202,7 @@ namespace Maple.Data
         {
             badguy1,
             map1,
+            FullHealthBar,
             BlueEspressoMachineLeft,
             BlueEspressoMachineRight,
             BlueRaspberryJellyJuiceLeft,
@@ -221,6 +222,7 @@ namespace Maple.Data
             TheNextLegendTitle,
             LeftHealthBar,
             HealthBarEmpty,
+            HealthBarDropping,
             runetest5,
             runetest4,
             runetest3,
@@ -289,68 +291,192 @@ namespace Maple.Data
             return curClosestSide;
         }
 
-        public static bool SolveRune(Bitmap fullGameImage)
+        
+
+        public static bool SolveRune(Bitmap fullGameImage, out List<Input.SpecialCharacters> runeInputDataList, out List<Vector2> locations)
         {
+            fullGameImage = Imaging.CropImage(fullGameImage, new Rectangle(0, 0, fullGameImage.Width, 400));
+            locations = new List<Vector2>();
+            int numRuneKeys = 4;
             List<Color> RuneColors = new List<Color>()
             {
+                Color.FromArgb(0, 238, 34),
+                Color.FromArgb(11, 255, 34),
                 Color.FromArgb(19, 248, 41),  // dark green, at base
-                //Color.FromArgb(170, 255, 0),  // lime greenish, in middle
-                Color.FromArgb(221, 102, 0)   // orangish, at tip of point
+                Color.FromArgb(61, 214, 61),
+                Color.FromArgb(57, 207, 54),
+                Color.FromArgb(133, 255, 17),
+                Color.FromArgb(187, 255, 0),  // lime greenish, in middle
+                Color.FromArgb(199, 226, 0), // yellowish
+                Color.FromArgb(204, 240, 0),
+                Color.FromArgb(204, 223, 0),
+                Color.FromArgb(204, 192, 0),
+                Color.FromArgb(221, 102, 0),  // orangish, at tip of point
+                Color.FromArgb(231, 56, 11),  // bright red tip
+                Color.FromArgb(238, 51, 0),
+                Color.FromArgb(238, 1, 1),
             };
+            runeInputDataList = new List<Input.SpecialCharacters>();
             // this is a lil hacky because it was meant for mobs but uh
             Dictionary<Color, MobCluster> pixelClusters = new Dictionary<Color, MobCluster>();
-            foreach (var curRuneColor in RuneColors)
+            /*foreach (var curRuneColor in RuneColors)
             {
                 pixelClusters.Add(curRuneColor, new MobCluster());
-            }
-            int runeArrowsFound = 0;
-            int maxRuneArrows = 4;
-            int minRuneColorsHit = 5;
-            for (int curXPixel = 638; curXPixel <= 1190; curXPixel += 92)
+            }*/
+
+            Vector2 PixelToPixelCoordinate(int pixelLocation, int imageWidth)
             {
-                Bitmap croppedImage = CropImage(fullGameImage, new Rectangle(curXPixel, 180, 92, 50));
-                List<Color> curColorData = GetColorsFromBmp(croppedImage);
-                int croppedImageWidth = croppedImage.Width;
-                int croppedImageHeight = croppedImage.Height;
-                /*Parallel.ForEach(Enumerable.Range(0, croppedImageWidth * croppedImageHeight), curColorIndex => 
-                { 
+                return new Vector2(pixelLocation % imageWidth, pixelLocation / imageWidth);
+            }
+            List<Color> imageColors = GetColorsFromBmp(fullGameImage);
+            int maxTolerance = 2;
+            int GetColorHits(MobCluster curMobClusterData)
+            {
+                Dictionary<Color, bool> colorHits = new Dictionary<Color, bool>();
+                foreach (var curRuneColor in RuneColors)
+                {
+                    colorHits[curRuneColor] = false;
+                }
+                foreach (var curLocation in curMobClusterData.Locations)
+                {
+                    foreach (var curColor in RuneColors)
+                    {
+                        if (ImageFinder.WithinTolerance(imageColors[MapleMath.PixelCoordinateToPixel(curLocation, fullGameImage.Width)], curColor, maxTolerance))
+                        {
+                            colorHits[curColor] = true;
+                        }
+                    }
+                    
+                }
+                return colorHits.Values.Where(x => x == true).Count();
+            }
+
+            
+            //MobCluster cluster = new MobCluster();
+            List<Vector2> withinToleranceLocations = new List<Vector2>();
+            
+            for (int i = 0; i < imageColors.Count; i++)
+            {
+                foreach (var curRuneColor in RuneColors)
+                {
+                    if (ImageFinder.WithinTolerance(imageColors[i], curRuneColor, maxTolerance))
+                    {
+                        withinToleranceLocations.Add(PixelToPixelCoordinate(i, fullGameImage.Width));
+                        break;
+                    }
+                }
+            }
+            Dictionary<Color, List<Vector2>> ColorsToLocations = new Dictionary<Color, List<Vector2>>();
+            int pixelSideAmount = 32;
+            double minDistance = 16.0;
+            List<MobCluster> pixelClusterDataList = new List<MobCluster>();
+            var preProcessedPixelClusterDataList = MobCluster.FindMobClustersFromPixelData(withinToleranceLocations, fullGameImage.Width, fullGameImage.Height, pixelSideAmount, pixelSideAmount).OrderByDescending(x => GetColorHits(x)).ThenByDescending(x => x.Locations.Count).ToList();
+            pixelClusterDataList.Add(preProcessedPixelClusterDataList[0]);
+            bool broke = false;
+            foreach (var curPixelClusterData in preProcessedPixelClusterDataList)
+            {
+                broke = false;
+                foreach (var curAcceptedPixelClusterData in pixelClusterDataList)
+                {
+                    if (MapleMath.PixelCoordinateDistance(curAcceptedPixelClusterData.Center, curPixelClusterData.Center) < minDistance)
+                    {
+                        broke = true;
+                        break;
+                    }
+                }
+                if (!broke)
+                {
+                    pixelClusterDataList.Add(curPixelClusterData);
+                }
+            }
+            preProcessedPixelClusterDataList = new List<MobCluster>(pixelClusterDataList);
+            pixelClusterDataList.Clear();
+            double bestYValue = preProcessedPixelClusterDataList[0].Center.Y;
+            int maxYVariance = 36;
+            foreach (var curPixelClusterData in preProcessedPixelClusterDataList)
+            {
+                if (Math.Abs(curPixelClusterData.Center.Y - bestYValue) > maxYVariance)
+                {
+                    continue;
+                }
+                pixelClusterDataList.Add(curPixelClusterData);
+            }
+            pixelClusterDataList = pixelClusterDataList.Take(4).OrderBy(x => x.Center.X).ToList();
+            locations = pixelClusterDataList.Select(x => x.Center).ToList();
+            int neededPixelsTolerance = 1;
+            MobCluster mostGreenCluster = null;
+            MobCluster mostRedCluster = null;
+            // from left to right
+            foreach (var curPixelCluster in pixelClusterDataList)
+            {
+                foreach (var curRuneColor in RuneColors)
+                {
+                    pixelClusters[curRuneColor] = new MobCluster();
+                }
+                foreach (var curColor in RuneColors)
+                {
+                    ColorsToLocations[curColor] = new List<Vector2>();
+                }
+                foreach (var curLocation in curPixelCluster.Locations)
+                {
                     foreach (var curRuneColor in RuneColors)
                     {
-                        if (WithinTolerance(curColorData[curColorIndex], curRuneColor, 5))
+                        if (ImageFinder.WithinTolerance(imageColors[MapleMath.PixelCoordinateToPixel(curLocation, fullGameImage.Width)], curRuneColor, maxTolerance))
                         {
-                            pixelClusters[curRuneColor].AddHit(curColorIndex);
+                            ColorsToLocations[curRuneColor].Add(curLocation);
                             break;
                         }
                     }
-                });*/
-                /*Dictionary<Color, ClosestSide> colorSuggestions = new Dictionary<Color, ClosestSide>();
+                }
                 foreach (var curColor in RuneColors)
                 {
-                    colorSuggestions.Add(curColor, ClosestSide.Unassigned);
+                    var curCluster = MobCluster.FindMobClustersFromPixelData(ColorsToLocations[curColor], fullGameImage.Width, fullGameImage.Height, pixelSideAmount, pixelSideAmount).OrderByDescending(x => x.Locations.Count).FirstOrDefault();
+                    pixelClusters[curColor] = curCluster;
                 }
-                foreach (var curRuneColor in RuneColors)
+                foreach (var curColor in RuneColors)
                 {
-                    if (pixelClusters[curRuneColor].Locations.Count > minRuneColorsHit)
+                    if ((pixelClusters[curColor]?.Locations?.Count ?? 0) >= neededPixelsTolerance)
                     {
-                        colorSuggestions[curRuneColor] = GetClosestSide(pixelClusters[curRuneColor].Center, croppedImageWidth, croppedImageHeight);
+                        mostGreenCluster = pixelClusters[curColor];
                     }
-                }*/
-                // check if red and green agree
-                
-                // if they agree add the input
-                if (runeArrowsFound == maxRuneArrows)
+                }
+                RuneColors.Reverse();
+                foreach (var curColor in RuneColors)
                 {
-                    break;
+                    if ((pixelClusters[curColor]?.Locations?.Count ?? 0) >= neededPixelsTolerance)
+                    {
+                        mostRedCluster = pixelClusters[curColor];
+                    }
+                }
+                RuneColors.Reverse();
+                if (Math.Abs(mostGreenCluster.Center.X - mostRedCluster.Center.X) > Math.Abs(mostGreenCluster.Center.Y - mostRedCluster.Center.Y))
+                {
+                    if (mostGreenCluster.Center.X > mostRedCluster.Center.X)
+                    {
+                        runeInputDataList.Add(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                    }
+                    else
+                    {
+                        runeInputDataList.Add(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                    }
+                }
+                else
+                {
+                    if (mostGreenCluster.Center.Y > mostRedCluster.Center.Y)
+                    {
+                        runeInputDataList.Add(Input.SpecialCharacters.KEY_DOWN_ARROW);
+                    }
+                    else
+                    {
+                        runeInputDataList.Add(Input.SpecialCharacters.KEY_UP_ARROW);
+                    }
                 }
             }
-            if (runeArrowsFound == maxRuneArrows)
-            {
-                return true;
-            }
-            return false;
+            
+            return runeInputDataList.Count == numRuneKeys;
         }
 
-        public static bool GetMobLocation(MapData mapData, out int numMobs, Vector2 playerMinimapLocation, out Vector2 bestMinimapLocation)
+        public static bool GetMobLocation(MapData mapData, out int numMobs, Vector2 playerMinimapLocation, out Vector2 bestMinimapLocation, Bitmap curScreen)
         {
             List<MobNames> currentMobNames = MapData.MapNamesToMobNames[mapData.MapName];
             List<Imaging.ImageFiles> currentMobImageFileNames = new List<Imaging.ImageFiles>();
@@ -364,16 +490,11 @@ namespace Maple.Data
                 currentMobImages.Add(Imaging.GetImageFromFile(curMobImageFileName));
             }
             Bitmap playerTitleImage = Imaging.GetImageFromFile(ImageFiles.TheNextLegendTitle); // todo
-            double titleToPlayerOffsetX = 70; 
+            double titleToPlayerOffsetX = 90; 
             double titleToPlayerOffsetY = -50;
-            Bitmap curScreen;
             List<Vector2> mobLocations;
-            while (!Imaging.GetCurrentGameScreen(out curScreen))
-            {
-                Thread.Sleep(10);
-            }
             // todo uhh this could pose a problem actually if multiple players
-            if (playerMinimapLocation != null && Imaging.FindBitmap(new List<Bitmap>() { playerTitleImage }, curScreen, out List<Vector2> titleLocations, ImageFindTypes.Traditional) && Imaging.FindBitmap(currentMobImages, curScreen, out mobLocations, ImageFindTypes.SimilarImage) && titleLocations.Count == 1)
+            if (playerMinimapLocation != null && Imaging.FindBitmap(new List<Bitmap>() { playerTitleImage }, curScreen, out List<Vector2> titleLocations, ImageFindTypes.Traditional) && Imaging.FindBitmap(currentMobImages, curScreen, out mobLocations, ImageFindTypes.SimilarImage) && (titleLocations.Count == 1 || (titleLocations.Count == 2 && titleLocations[0].X == titleLocations[1].X + 1)))
             {
                 List<MobCluster> mobClusterData = MobCluster.FindMobClustersFromPixelData(mobLocations, curScreen.Width, curScreen.Height);
                 MobCluster curMobCluster = mobClusterData.OrderByDescending(x => x.Locations.Count()).Take(1).First();
@@ -622,9 +743,9 @@ namespace Maple.Data
     });
 }*/
 
-        public static bool FindBitmap(List<Bitmap> subImageDataList, Bitmap sourceImage, out List<Vector2> locations, ImageFindTypes imageFindType = ImageFindTypes.ExactImage)
+        public static bool FindBitmap(List<Bitmap> subImageDataList, Bitmap sourceImage, out List<Vector2> locations, ImageFindTypes imageFindType = ImageFindTypes.ExactImage, int tolerance = 180)
         {
-            if (!ImageFinder.FindImage(imageFindType, sourceImage, subImageDataList, out locations))
+            if (!ImageFinder.FindImage(imageFindType, sourceImage, subImageDataList, out locations, tolerance))
             {
                 return false;
             }

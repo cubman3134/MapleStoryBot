@@ -30,9 +30,7 @@ namespace Maple.Data
             Locations.Add(newLocation);
         }
 
-        public static double MaxVerticalClusterDistance = 100.0;
-        public static double MaxHorizontalClusterDistance = 300.0;
-        public static List<MobCluster> FindMobClustersFromPixelData(List<Vector2> mobLocations, int imageWidth, int imageHeight)
+        public static List<MobCluster> FindMobClustersFromPixelData(List<Vector2> mobLocations, int imageWidth, int imageHeight, int maxVerticalClusterDistance = 100, int maxHorizontalClusterDistance = 300)
         {
             List<MobCluster> mobClusters = new List<MobCluster>();
             foreach (var curMobLocation in mobLocations)
@@ -44,8 +42,8 @@ namespace Maple.Data
                     double verticalDistance = Math.Abs(curCoordinate.Y - curMobCluster.Center.Y);
                     double horizontalDistance = Math.Abs(curCoordinate.X - curMobCluster.Center.X);
                     //double distance = MapleMath.PixelCoordinateDistance(curCoordinate, curMobCluster.Center);
-                    if (verticalDistance < MaxVerticalClusterDistance
-                        && horizontalDistance < MaxHorizontalClusterDistance)
+                    if (verticalDistance < maxVerticalClusterDistance
+                        && horizontalDistance < maxHorizontalClusterDistance)
                     {
                         curMobCluster.AddHit(curCoordinate);
                         added = true;

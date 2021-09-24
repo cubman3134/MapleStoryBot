@@ -283,7 +283,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\runetest2.png" />
-    <Resource Include="Images\runetest3.png" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\HP.png" />
@@ -307,6 +306,15 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\HealthBarEmpty.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\FullHealthBar.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\HealthBarDropping.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\runetest3.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Accord.3.8.0\build\Accord.targets" Condition="Exists('..\packages\Accord.3.8.0\build\Accord.targets')" />

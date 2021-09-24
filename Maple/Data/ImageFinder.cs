@@ -297,7 +297,7 @@ namespace Maple.Data
             return returnData;
         }
 
-        private static bool WithinTolerance(Color colorA, Color colorB, int tol)
+        public static bool WithinTolerance(Color colorA, Color colorB, int tol)
         {
 
             if (Math.Abs(colorA.R - colorB.R) + Math.Abs(colorA.B - colorB.B) + Math.Abs(colorA.R - colorB.R) < tol)
@@ -406,7 +406,7 @@ namespace Maple.Data
             return true;
         }
 
-        public static bool FindImage(ImageFindTypes imageFindType, Bitmap sourceImage, List<Bitmap> subImageDataList, out List<Vector2> subImageLocations)
+        public static bool FindImage(ImageFindTypes imageFindType, Bitmap sourceImage, List<Bitmap> subImageDataList, out List<Vector2> subImageLocations, int tolerance = 180)
         {
             List<System.Drawing.Point> returnData = null;
             switch (imageFindType)
@@ -418,7 +418,7 @@ namespace Maple.Data
                     returnData = MatchPicBySurf(sourceImage, subImageDataList);
                     break;
                 case ImageFindTypes.Traditional:
-                    return TraditionalFindBitmap(subImageDataList, sourceImage, 180, out subImageLocations);
+                    return TraditionalFindBitmap(subImageDataList, sourceImage, tolerance, out subImageLocations);
             }
             subImageLocations = returnData.Select(x => new Vector2(x.X, x.Y)).ToList();
             return subImageLocations.Any();

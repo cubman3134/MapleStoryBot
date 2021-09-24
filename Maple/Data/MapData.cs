@@ -193,6 +193,7 @@ namespace Maple.Data
 
         public static double MinimapToPixelRatio = 0.043478260869565216;
 
+
         public void SetupConjoiningMapPiecesBasedOnJumpData(JumpData characterJumpData)
         {
             double curY;
@@ -257,6 +258,8 @@ namespace Maple.Data
                                     {
                                         foreach (var curMillisecondDelaysToEquationCoefficients in curJumpInformationData.MillisecondDelaysToEquationCoefficients)
                                         {
+                                            Vector2 prevLeftCheck = null;
+                                            Vector2 prevRightCheck = null;
                                             enumeratedJumpValues = curMillisecondDelaysToEquationCoefficients.EnumerateValues();
                                             bool descending = false;
                                             Vector2 previousJumpValue = null;
@@ -285,23 +288,33 @@ namespace Maple.Data
                                                 }
                                                 foreach (var curCheckMapPiece in MapPieceDataList)
                                                 {
-                                                    if (leftValueStillInPlay && curCheckMapPiece.LocationWithinBounds(leftCheck, out landData, 0))
+                                                    //if (leftValueStillInPlay && curCheckMapPiece.LocationWithinBounds(leftCheck, out landData, 0))
+                                                    if (leftValueStillInPlay && prevLeftCheck != null && MapleMath.LineIntersection.FindIntersection(new MapleMath.Line(prevLeftCheck, leftCheck), new MapleMath.Line(curCheckMapPiece.Beginning, curCheckMapPiece.End), out landData))
                                                     {
-                                                        leftValueStillInPlay = false;
+                                                        if (curCheckMapPiece.MapPieceType != MapPieceTypes.Rope)
+                                                        {
+                                                            leftValueStillInPlay = false;
+                                                        }
                                                         if (curCheckMapPiece.Beginning.X == checkMapPiece.Beginning.X && curCheckMapPiece.Beginning.Y == checkMapPiece.Beginning.Y)
                                                         {
                                                             curMapPieceLink.AddJoiningJumpData(curJumpInformationData.JumpType, new Vector2(curX, curY), true, curMillisecondDelaysToEquationCoefficients.MillisecondDelays, landData);
                                                         }
                                                     }
-                                                    if (rightValueStillInPlay && curCheckMapPiece.LocationWithinBounds(rightCheck, out landData, 0))
+                                                    //if (rightValueStillInPlay && curCheckMapPiece.LocationWithinBounds(rightCheck, out landData, 0))
+                                                    if (rightValueStillInPlay && prevRightCheck != null && MapleMath.LineIntersection.FindIntersection(new MapleMath.Line(prevRightCheck, rightCheck), new MapleMath.Line(curCheckMapPiece.Beginning, curCheckMapPiece.End), out landData))
                                                     {
-                                                        rightValueStillInPlay = false;
+                                                        if (curCheckMapPiece.MapPieceType != MapPieceTypes.Rope)
+                                                        {
+                                                            rightValueStillInPlay = false;
+                                                        }
                                                         if (curCheckMapPiece.Beginning.X == checkMapPiece.Beginning.X && curCheckMapPiece.Beginning.Y == checkMapPiece.Beginning.Y)
                                                         {
                                                             curMapPieceLink.AddJoiningJumpData(curJumpInformationData.JumpType, new Vector2(curX, curY), false, curMillisecondDelaysToEquationCoefficients.MillisecondDelays, landData);
                                                         }
                                                     }
                                                 }
+                                                prevRightCheck = rightCheck;
+                                                prevLeftCheck = leftCheck;
                                             }
                                         }
                                     }

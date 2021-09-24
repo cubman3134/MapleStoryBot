@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Maple.Data
 {
-    class MapleSerialPort
+    public class MapleSerialPort
     {
         private SerialPort ArduinoPortData;
         private string _portName;
@@ -32,7 +32,7 @@ namespace Maple.Data
                 string s = ArduinoPortData.ReadExisting();
                 if (s.Length > 0)
                 {
-                    Console.WriteLine($"Data Received from {_portName} [{s}]");
+                    //Console.WriteLine($"Data Received from {_portName} [{s}]");
                 }
                 Thread.Sleep(100);
             }

@@ -88,9 +88,10 @@ namespace Maple
                 {
                     break;
                 }
+                Thread.Sleep(100);
                 if (!isActive)
                 {
-                    Thread.Sleep(100);
+                    
                     continue;
                 }
                 if (isClosing)
@@ -98,10 +99,11 @@ namespace Maple
                     return;
                 }
                 Bitmap croppedImage;
-                if (!Data.Imaging.GetCurrentGameScreen(out croppedImage))
+                /*if (!Data.Imaging.GetCurrentGameScreen(out croppedImage))
                 {
                     continue;
-                }
+                }*/
+                croppedImage = RuneTestData;
                 //Bitmap croppedImage = Data.Imaging.CropImage(src, new Rectangle(730, 180, 92, 50));
                 
                 Graphics g = Graphics.FromImage(croppedImage);
@@ -118,7 +120,7 @@ namespace Maple
                 var cursorPosition = System.Windows.Forms.Cursor.Position;
                 // Draw the text onto the image
                 //g.DrawString($"x: {xVal} y: {yVal}\n x: {cursorPosition.X} y: {cursorPosition.Y}", new Font("Arial", 18), Brushes.Red, new RectangleF(0, 0, croppedImage.Width, croppedImage.Height), format);
-                if (Maple.Data.Imaging.FindBitmap(enemyImages, croppedImage, out List<Vector2> locations, ImageFindTypes.Traditional))
+                /*if (Maple.Data.Imaging.FindBitmap(enemyImages, croppedImage, out List<Vector2> locations, ImageFindTypes.Traditional))
                 {
                     //List<MobCluster> mobClusterData = MobCluster.FindMobClustersFromPixelData(locations, croppedImage.Width, croppedImage.Height);
                     //var curMobCluster = mobClusterData.OrderByDescending(x => x.Locations.Count()).Take(1);
@@ -130,6 +132,10 @@ namespace Maple
                         g.DrawRectangle(new Pen(Color.Red, 10), new Rectangle((int)(curLocation.X) + 50, (int)curLocation.Y - 50, 4 + 20, 6 + 20));
                     }
                     
+                }*/
+                foreach (var curLocation in imageLocations)
+                {
+                    g.DrawRectangle(new Pen(Color.Red, 10), new Rectangle((int)(curLocation.X) - 10, (int)curLocation.Y - 10, 4 + 20, 6 + 20));
                 }
                 /*var results = new IronTesseract().Read(croppedImage);*/
                 // Flush all graphics changes to the bitmap
@@ -152,13 +158,20 @@ namespace Maple
         }
 
         Thread CameraUpdateThread;
-
+        Bitmap RuneTestData = null;
+        List<Vector2> imageLocations = new List<Vector2>();
         public MainWindow()
         {
             InitializeComponent();
             DataContext = new MainWindowViewModel();
             CameraUpdateThread = new Thread(CameraUpdate) { Name = "Main Window Camera Update Thread" };
             CameraUpdateThread.Start();
+            var runeTestData = Data.Imaging.GetImageFromFile(Data.Imaging.ImageFiles.runetest2);
+            //runeTestData = Data.Imaging.CropImage(runeTestData, new Rectangle(100, 0, runeTestData.Width - 200, 400));
+
+            RuneTestData = runeTestData;
+            Data.Imaging.SolveRune(runeTestData, out List<Input.SpecialCharacters> chars, out imageLocations);
+            Console.WriteLine(string.Join(", ", chars.Select(x => x.ToString())));
             Input.InitializeInputs();
             var mapImage = Data.Imaging.GetImageFromFile(Data.Imaging.ImageFiles.map1);
             var badguyImage = Data.Imaging.GetImageFromFile(Data.Imaging.ImageFiles.badguy1);

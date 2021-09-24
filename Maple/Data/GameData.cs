@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Maple.Data
 {
@@ -30,6 +31,12 @@ namespace Maple.Data
         GrabbingMVP = 3,
         WalkingBackToMobMap = 4,
         ChangingChannel = 5
+    }
+
+    public class MobClusterData
+    {
+        public int NumMobs;
+        public Vector2 Location;
     }
 
     class GameData
@@ -71,27 +78,33 @@ namespace Maple.Data
         private Thread _minimapThread;
 
         int NumMobsAtNextCluster;
-        Vector2 NextMobClusterMinimapLocation;
+        ConcurrentDictionary<DateTime, MobClusterData> MobClusterDataList;
         bool ReadyForNewCluster;
         bool MobDirectionLeft;
         bool CloseMobsStillAlive;
         bool CharacterDirectionLeft;
-        Vector2 CurrentPlayerMinimapLocation;
+        public Vector2 CurrentPlayerMinimapLocation;
+        public Vector2 CurrentExpectedMobLocation;
 
         private void NewMobFinderThreadWorker()
         {
+            MobClusterDataList = new ConcurrentDictionary<DateTime, MobClusterData>();
             Vector2 bestMinimapData;
             int numMobs;
+            Bitmap curScreen;
             while (!Closing)
             {
-                if (Imaging.GetMobLocation(CurrentMapData, out numMobs, CurrentPlayerMinimapLocation, out bestMinimapData))
+                while (!Imaging.GetCurrentGameScreen(out curScreen))
                 {
-                    if (numMobs > NumMobsAtNextCluster)
-                    {
-                        NumMobsAtNextCluster = numMobs;
-                        NextMobClusterMinimapLocation = bestMinimapData;
-                    }
+                    Thread.Sleep(10);
                 }
+                // i was going to delete in this thread as well if mob cluster data insertion time was > some threshold but will handle that in thread that's grabbing them
+                // for simplicity sake
+                if (Imaging.GetMobLocation(CurrentMapData, out numMobs, CurrentPlayerMinimapLocation, out bestMinimapData, curScreen))
+                {
+                    MobClusterDataList[DateTime.Now] = new MobClusterData() { NumMobs = numMobs, Location = bestMinimapData };
+                }
+                Thread.Sleep(100);
             }
         }
 
@@ -111,6 +124,7 @@ namespace Maple.Data
                     // hope and pray there is only one player location
                     CurrentPlayerMinimapLocation = locations[0];
                 }
+                Thread.Sleep(50);
             }
             
         }
@@ -118,50 +132,88 @@ namespace Maple.Data
         private void NearbyMobsThreadWorker()
         {
             Bitmap curScreen;
-            var leftHealthBarImage = Imaging.GetImageFromFile(Imaging.ImageFiles.LeftHealthBar);
+            var fullHealthBarImage = Imaging.GetImageFromFile(Imaging.ImageFiles.FullHealthBar);
             var emptyHealthBarImage = Imaging.GetImageFromFile(Imaging.ImageFiles.HealthBarEmpty);
+            var droppingHealthBarImage = Imaging.GetImageFromFile(Imaging.ImageFiles.HealthBarDropping);
             List<Vector2> imageLocations;
             bool isLeft = false;
             double minDistance = double.MaxValue;
-            int distanceTolerance = 10;
-            int maxFailureAmount = 3;
+            int distanceTolerance = 22;
+            int maxFailureAmount = 0;
             int totalFailureAmount = 0;
-            double titleToPlayerOffsetX = 70;
+            double titleToPlayerOffsetX = 50;
             double titleToPlayerOffsetY = -50;
-            int numMobsLeft = 0;
-            int numMobsRight = 0;
             double maxYDistance = 100;
             double maxXDistance = 100;
             Vector2 playerLocationMapPieceStart = null;
             double curDistance;
+            bool ignoreMobDirection = false;
             Random rand = new Random();
             bool justSleeping = true;
+            bool wakingUp = true;
+            int numMobsLeft = 0;
+            int numMobsRight = 0;
             Bitmap playerTitleImage = Imaging.GetImageFromFile(Imaging.ImageFiles.TheNextLegendTitle); // todo
             while (!Closing)
             {
                 while (!CloseMobsStillAlive)
                 {
+                    wakingUp = true;
                     justSleeping = true;
                     Thread.Sleep(100);
                     continue;
                 }
                 if (justSleeping)
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(500);
                     justSleeping = false;
                 }
                 while (!Imaging.GetCurrentGameScreen(out curScreen))
                 {
                     Thread.Sleep(10);
                 }
+                var mobMapLocation = CurrentMapData.GetCurrentMapPiece(CurrentExpectedMobLocation);
+                var playerMapLocation = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
+                if (!(mobMapLocation.Beginning.X == playerMapLocation.Beginning.X && mobMapLocation.Beginning.Y == playerMapLocation.Beginning.Y))
+                {
+                    Console.WriteLine($"Current player map location beginning [{playerMapLocation.Beginning.X}-{playerMapLocation.Beginning.Y}] is not mob map location beginning [{mobMapLocation.Beginning.X}-{mobMapLocation.Beginning.Y}] so setting close mobs still alive = false");
+                    CloseMobsStillAlive = false;
+                    continue;
+                }
+                if (CurrentPlayerMinimapLocation.X > CurrentExpectedMobLocation.X && wakingUp)
+                {
+                    Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                    Console.WriteLine($"Moving towards mob LEFT because character direction is left [{CharacterDirectionLeft}], character location is [{CurrentPlayerMinimapLocation.X}], and mob location is [{CurrentExpectedMobLocation.X}].");
+                    CharacterDirectionLeft = true;
+                    Thread.Sleep(rand.Next(400, 450));
+                    Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
+                }
+                else if (CurrentPlayerMinimapLocation.X < CurrentExpectedMobLocation.X && wakingUp)
+                {
+                    Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                    Console.WriteLine($"Moving towards mob RIGHT because character direction is left [{CharacterDirectionLeft}], character location is [{CurrentPlayerMinimapLocation.X}], and mob location is [{CurrentExpectedMobLocation.X}].");
+                    CharacterDirectionLeft = false;
+                    Thread.Sleep(rand.Next(400, 450));
+                    Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                }
+                else
+                {
+                    Console.WriteLine($"Not moving towards mob because character direction is left [{CharacterDirectionLeft}], character location is [{CurrentPlayerMinimapLocation.X}], and mob location is [{CurrentExpectedMobLocation.X}].");
+                }
+                wakingUp = false;
+                ignoreMobDirection = true;
+                numMobsRight = 0;
+                numMobsLeft = 0;
+                //wakingUp = false;
                 // todo using title image here too, havent decided if that's bad yet
                 if (Imaging.FindBitmap(new List<Bitmap>() { playerTitleImage }, curScreen, out List<Vector2> titleLocations, ImageFindTypes.Traditional))
                 {
                     minDistance = double.MaxValue;
-                    if (Imaging.FindBitmap(new List<Bitmap>() { leftHealthBarImage, emptyHealthBarImage }, curScreen, out imageLocations) && (titleLocations.Count == 1 || (titleLocations.Count == 2 && titleLocations[0].X == titleLocations[1].X + 1)))
+                    if (Imaging.FindBitmap(new List<Bitmap>() { fullHealthBarImage, emptyHealthBarImage, droppingHealthBarImage }, curScreen, out imageLocations, ImageFindTypes.Traditional, 100) && (titleLocations.Count == 1 || (titleLocations.Count == 2 && titleLocations[0].X == titleLocations[1].X + 1)))
                     {
+                        Console.WriteLine($"Found [{imageLocations.Count}] health bar screen locations.");
                         var playerScreenLocation = new Vector2(titleLocations[0].X + titleToPlayerOffsetX, titleLocations[0].Y + titleToPlayerOffsetY);
-                        playerLocationMapPieceStart = CurrentMapData.GetCurrentMapPiece(playerScreenLocation).Beginning;
+                        playerLocationMapPieceStart = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation).Beginning;
                         foreach (var curImageLocation in imageLocations)
                         {
                             var curGameLocation = curImageLocation;
@@ -176,52 +228,70 @@ namespace Maple.Data
                                 continue;
                             } 
                             curDistance = MapleMath.PixelCoordinateDistance(curMinimapLocation, CurrentPlayerMinimapLocation);
-                            if (curDistance < minDistance)
+                            if (curDistance < distanceTolerance)
                             {
-                                minDistance = curDistance;
                                 if (curMinimapLocation.X < CurrentPlayerMinimapLocation.X)
                                 {
-                                    isLeft = true;
+                                    numMobsLeft++;
                                 }
                                 else
                                 {
-                                    isLeft = false;
+                                    numMobsRight++;
                                 }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Disqualifying mob health location because distance was [{curDistance}] > [{distanceTolerance}]");
                             }
                         }
                     }
-                    
-                    if (minDistance < distanceTolerance)
+                    if (numMobsLeft + numMobsRight > 0)
                     {
+                        Console.WriteLine($"Num mobs left was [{numMobsLeft}] and num mobs right was [{numMobsRight}] so resetting failures.");
                         totalFailureAmount = 0;
                         CloseMobsStillAlive = true;
-                        MobDirectionLeft = isLeft;
+                        MobDirectionLeft = numMobsLeft > numMobsRight;
                         if (MobDirectionLeft && !CharacterDirectionLeft)
                         {
+                            Console.WriteLine($"Moving left because mob direction was left and character direction was right");
                             Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                             CharacterDirectionLeft = true;
-                            Thread.Sleep(rand.Next(20, 80));
+                            Thread.Sleep(rand.Next(400, 450));
                             Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                         }
                         else if (!MobDirectionLeft && CharacterDirectionLeft)
                         {
+                            Console.WriteLine($"Moving left because mob direction was right and character direction was left");
                             Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                             CharacterDirectionLeft = false;
-                            Thread.Sleep(rand.Next(20, 80));
+                            Thread.Sleep(rand.Next(400, 450));
                             Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Not moving at all because mob direction was left [{MobDirectionLeft}] and character direction was left [{CharacterDirectionLeft}]");
                         }
                     }
                     else
                     {
                         totalFailureAmount++;
+                        Console.WriteLine($"Encountered failire with total failure amount being [{totalFailureAmount}]");
                         if (totalFailureAmount > maxFailureAmount)
                         {
+                            Console.WriteLine($"Total failure amount [{totalFailureAmount}] so setting close mobs still alive = false");
                             totalFailureAmount = 0;
                             minDistance = double.MaxValue;
                             CloseMobsStillAlive = false;
+                            justSleeping = true;
                         }
                     }
                 }
+                else
+                {
+                    CloseMobsStillAlive = false;
+                    justSleeping = true;
+                }
+                Thread.Sleep(100);
             }
         }
 
@@ -294,6 +364,7 @@ namespace Maple.Data
             {
 
             }
+            int mobTimeoutThresholdSeconds = 5;
             string fileLocation = System.Configuration.ConfigurationManager.AppSettings["ClassExportLocation"];
             string fullPath = Path.Combine(fileLocation, Jobs.DemonAvenger.ToString());
             string jsonString = File.ReadAllText(fullPath);
@@ -315,20 +386,12 @@ namespace Maple.Data
                 
                 //_mobFinderThread.Start();
             }
-            while (NextMobClusterMinimapLocation == null)
-            {
-                Thread.Sleep(100);
-                if (Closing)
-                {
-                    return;
-                }
-            }
             Random rand = new Random();
             while (InGameStatus == InGameStatuses.Mobbing)
             {
                 while (CloseMobsStillAlive)
                 {
-                    Thread.Sleep(300);
+                    //Thread.Sleep(300);
                     if (Closing)
                     {
                         return;
@@ -341,22 +404,42 @@ namespace Maple.Data
                     //{
 
                     //}
-                    CurrentCharacterData.TryToUseSkill();
+                    if (!CurrentCharacterData.TryToUseSkill())
+                    {
+                        Thread.Sleep(100);
+                    }
                 }
                 //CurrentPlayerMinimapLocation = new Vector2(20, 93);
                 //NextMobClusterMinimapLocation = new Vector2(15, 93); // test todo
                 ReadyForNewCluster = false;
-                NumMobsAtNextCluster = 0;
-                nextMobCluster = NextMobClusterMinimapLocation;
+                //NumMobsAtNextCluster = 0;
+                MobClusterData currentMobClusterData = null;
+                foreach (var curMobClusterDataInsertionTime in MobClusterDataList.Where(x => x.Key < DateTime.Now - new TimeSpan(0, 0, 0, mobTimeoutThresholdSeconds)).Select(x => x.Key))
+                {
+                    MobClusterDataList.TryRemove(curMobClusterDataInsertionTime, out currentMobClusterData);
+                }
+                while (!(MobClusterDataList?.Any() ?? false))
+                {
+                    Thread.Sleep(100);
+                    if (Closing)
+                    {
+                        return;
+                    }
+                }
+                nextMobCluster = MobClusterDataList.Values.OrderByDescending(x => x.NumMobs).First().Location;
+                CurrentExpectedMobLocation = nextMobCluster;
+                MobClusterDataList.Clear();
                 MapPiece targetMapPiece = null;
 
                 MapPiece currentMapPiece = null;
                 do
                 {
                     targetMapPiece = CurrentMapData.GetCurrentMapPiece(nextMobCluster);
-                    LocationsOfInterest.Add(targetMapPiece.Center);
+                    if (targetMapPiece.MapPieceType == MapPieceTypes.Rope)
+                    {
+                        break;
+                    }
                     currentMapPiece = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
-                    LocationsOfInterest.Add(currentMapPiece.Center);
                     List<MapPiece> mapPieceDataList = MapleMath.FindRoute(CurrentMapData, currentMapPiece, targetMapPiece);
                     Console.WriteLine("starting!!");
                     double curY = 0;
@@ -364,6 +447,7 @@ namespace Maple.Data
                     {
                         while (curY != CurrentPlayerMinimapLocation.Y)
                         {
+                            Console.WriteLine($"current y [{curY}] not = to minimap location y [{CurrentPlayerMinimapLocation.Y}] so waiting.");
                             curY = CurrentPlayerMinimapLocation.Y;
                             Thread.Sleep(250);
                         }
@@ -375,29 +459,33 @@ namespace Maple.Data
                         var actualPlayerLocation = CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation);
                         if (!(actualPlayerLocation.Beginning.X == mapPieceDataList[curMapPieceIterator].Beginning.X && actualPlayerLocation.Beginning.Y == mapPieceDataList[curMapPieceIterator].Beginning.Y))
                         {
+                            Console.WriteLine("Actual player location != map piece data cur iterator so breaking");
                             break;
                         }
+                        LocationsOfInterest.Clear();
+                        LocationsOfInterest.Add(targetMapPiece.Center);
+                        LocationsOfInterest.Add(mapPieceDataList[curMapPieceIterator].Center);
                         if (curMapPieceIterator == mapPieceDataList.Count - 1)
                         {
-
+                            Console.WriteLine("We are at the target map piece now");
                             if (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
                             {
                                 Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                                 CharacterDirectionLeft = false;
-                                while (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
+                                do
                                 {
                                     Thread.Sleep(50);
-                                }
+                                } while (CurrentPlayerMinimapLocation.X < nextMobCluster.X - 1);
                                 Input.StopInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                             }
                             else if (CurrentPlayerMinimapLocation.X > nextMobCluster.X)
                             {
                                 Input.StartInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                                 CharacterDirectionLeft = true;
-                                while (CurrentPlayerMinimapLocation.X < nextMobCluster.X)
+                                do
                                 {
                                     Thread.Sleep(50);
-                                }
+                                } while (CurrentPlayerMinimapLocation.X > nextMobCluster.X + 1);
                                 Input.StopInput(Input.SpecialCharacters.KEY_LEFT_ARROW);
                             }
                             continue;
@@ -418,15 +506,27 @@ namespace Maple.Data
                         }
                         else
                         {
-                            randJumpSelection = rand.Next(0, curMapPieceLink.JoiningJumpDataList.Count);
-                            joiningJumpData = curMapPieceLink.JoiningJumpDataList[randJumpSelection];
+                            int tolerance = 0;
+                            if (curMapPieceLink.JoiningMapPiece.MapPieceType != MapPieceTypes.Rope)
+                            {
+                                tolerance = 1;
+                            }
+                            var jumpDataList = curMapPieceLink.JoiningJumpDataList.Where(x => x.LandLocation.X >= curMapPieceLink.JoiningMapPiece.Beginning.X + tolerance && x.LandLocation.X <= curMapPieceLink.JoiningMapPiece.End.X - tolerance).ToList();
+                            // remove the tolerance
+                            if (jumpDataList.Count == 0)
+                            {
+                                jumpDataList = curMapPieceLink.JoiningJumpDataList.Where(x => x.LandLocation.X >= curMapPieceLink.JoiningMapPiece.Beginning.X && x.LandLocation.X <= curMapPieceLink.JoiningMapPiece.End.X).ToList();
+                            }
+                            randJumpSelection = rand.Next(0, jumpDataList.Count);
+                            joiningJumpData = jumpDataList[randJumpSelection];
                         }
 
                         if (mapPieceDataList[curMapPieceIterator].MapPieceType == MapPieceTypes.Rope)
                         {
+                            Input.StartInput(Input.SpecialCharacters.KEY_UP_ARROW); // this should already be active but if not...
                             while (CurrentPlayerMinimapLocation.Y < mapPieceDataList[curMapPieceIterator].End.Y)
                             {
-                                Thread.Sleep(10);
+                                Thread.Sleep(50);
                             }
                             Input.StopInput(Input.SpecialCharacters.KEY_UP_ARROW);
                         }
@@ -460,9 +560,9 @@ namespace Maple.Data
                             Input.StartInput(Input.SpecialCharacters.KEY_RIGHT_ARROW);
                             CharacterDirectionLeft = false;
                         }
-                        Thread.Sleep(10);
+                        //Thread.Sleep(10);
                         JumpData.TryToJump(joiningJumpData.JumpType, joiningJumpData.MillisecondDelays);
-                        Thread.Sleep(10);
+                        //Thread.Sleep(10);
                         if (curMapPieceIterator + 1 < mapPieceDataList.Count() && mapPieceDataList[curMapPieceIterator + 1].MapPieceType == MapPieceTypes.Rope)
                         {
                             Input.StartInput(Input.SpecialCharacters.KEY_UP_ARROW);
@@ -489,14 +589,16 @@ namespace Maple.Data
                     }
                     Console.WriteLine("done!!");
                 } while (CurrentMapData.GetCurrentMapPiece(CurrentPlayerMinimapLocation).Beginning.X != targetMapPiece.Beginning.X && currentMapPiece.Beginning.Y != targetMapPiece.Beginning.Y);
-                LocationsOfInterest.Remove(targetMapPiece.Center);
-                LocationsOfInterest.Remove(currentMapPiece.Center);
+                Console.WriteLine("Setting close mobs still alive = true");
+                Thread.Sleep(100);
                 CloseMobsStillAlive = true;
+                
                 ReadyForNewCluster = true;
                 if (Closing)
                 {
                     return;
                 }
+                
             }
             
             
